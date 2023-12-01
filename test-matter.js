@@ -3,7 +3,9 @@ const bleno = require('./index');
 let handshakeDone = false;
 let C2Callback = null;
 
-console.log('bleno-matter');
+console.log('==================');
+console.log('GoAds BLE Starting - Matter');
+console.log('==================')
 
 class C3DynamicReadOnlyCharacteristic extends bleno.Characteristic {
   constructor() {

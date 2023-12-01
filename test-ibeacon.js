@@ -1,6 +1,8 @@
 const bleno = require('./index');
 
-console.log('bleno - iBeacon');
+console.log('==================');
+console.log('GoAds BLE Starting - iBeacon');
+console.log('==================')
 
 bleno.on('stateChange', function(state) {
   console.log('on -> stateChange: ' + state);
