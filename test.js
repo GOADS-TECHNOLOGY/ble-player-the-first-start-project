@@ -4,7 +4,9 @@ const BlenoPrimaryService = bleno.PrimaryService;
 const BlenoCharacteristic = bleno.Characteristic;
 const BlenoDescriptor = bleno.Descriptor;
 
-console.log('bleno');
+console.log('==================');
+console.log('GoAds BLE Starting');
+console.log('==================')
 
 console.log(bleno.PrimaryService);
 
