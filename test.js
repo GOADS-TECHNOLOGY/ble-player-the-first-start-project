@@ -98,7 +98,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
     
     if (data.toString('base64') === 'U3VjY2Vzc2Z1bGx5') {
       const completeDataString = this.completeData.toString('base64');
-      console.log('Complete data received: ' + completeDataString.toString('base64'));
+      console.log('Complete data received: ' + completeDataString);
       
       // Save the complete data as an MP4 file
       const outputPath = '../ble-player/video/test.mp4';
@@ -114,8 +114,8 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
 }
 
 // Function to decode base64 and write to file
-function decodeConvertToFile(base64Data, outputPath) {
-  const bufferData = Buffer.from(base64Data, 'base64');
+function decodeConvertToFile(completeDataString, outputPath) {
+  const bufferData = Buffer.from(completeDataString, 'base64');
   fs.writeFileSync(outputPath, bufferData, 'binary');
   console.log('File MP4 has been successfully created.'); 
 }
