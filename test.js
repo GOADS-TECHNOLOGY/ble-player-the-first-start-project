@@ -17,7 +17,7 @@ class StaticReadOnlyCharacteristic extends BlenoCharacteristic {
     super({
       uuid: 'fffffffffffffffffffffffffffffff1',
       properties: ['read'],
-      value: Buffer.from('value'),
+      value: Buffer.from('Hello Kudo!'),
       descriptors: [
         new BlenoDescriptor({
           uuid: '2901',
@@ -82,19 +82,18 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
   constructor() {
     super({
       uuid: 'fffffffffffffffffffffffffffffff4',
-      properties: ['write', 'writeWithoutResponse']
+      properties: ['write', 'writeWithoutResponse', 'notify']
     });
     this.writeCount = 0;
     this.completeData = Buffer.alloc(0);
+    this.child = null;
   }
 
   onWriteRequest(data, offset, withoutResponse, callback) {
+
     console.log('WriteOnlyCharacteristic write request: ' + data.toString('utf-8') + ' ' + offset + ' ' + withoutResponse);
     console.log('Write dataBase64: ' + data.toString('base64'));
     console.log('Write request count: ' + (++this.writeCount));
-
-    // // Debug push to LED Panel
-    // this.runCommandLine();
 
     this.completeData = Buffer.concat([this.completeData, data]);
 
@@ -119,6 +118,11 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
   }
 
   runCommandLine() {
+    // Terminate any existing process
+    if (this.child) {
+      this.child.kill('SIGTERM');
+    }
+
     const command = 'sudo';
     const args = [
       '/home/pi3b/Projects/rpi-rgb-led-matrix/utils/video-viewer',
@@ -137,7 +141,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
 
     // Spawn the process
     const child = spawn(command, args);
-
+    
     // Handle output
     child.stdout.on('data', (data) => {
       console.log(`stdout: ${data}`);
@@ -150,6 +154,20 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
     child.on('close', (code) => {
       console.log(`child process exited with code ${code}`);
     });
+  }
+
+  stopProcess() {
+    if (this.child) {
+      this.child.kill('SIGTERM'); // Terminate the process
+      this.child = null; // Reset the reference
+      console.log('Process stopped');
+    }
+  }
+
+  onSubscribe(maxValueSize, updateValueCallback) {
+    this.changeInterval = setInterval(function () {
+      updateValueCallback("200");
+    }.bind(this), 5000);
   }
 }
 
