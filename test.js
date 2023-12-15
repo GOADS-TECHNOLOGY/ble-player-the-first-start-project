@@ -129,14 +129,21 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
   }
 
   decodeConvertToFile(dataString) {
-    const bufferData = Buffer.from(dataString, "base64");
-    fs.writeFileSync(
-      "/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage/output_write.mp4",
-      bufferData,
-      "binary"
-    );
-    console.log("File MP4 has been successfully created.");
-    this.runCommandLine();
+    const pathToStoreVideo =
+      "/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage";
+
+    if (!fs.existsSync(pathToStoreVideo)) {
+      fs.mkdirSync(pathToStoreVideo, { recursive: true });
+    } else {
+      const bufferData = Buffer.from(dataString, "base64");
+      fs.writeFileSync(
+        `${pathToStoreVideo}/output_write.mp4`,
+        bufferData,
+        "binary"
+      );
+      console.log("File MP4 has been successfully created.");
+      this.runCommandLine();
+    }
   }
 
   runCommandLine() {
