@@ -82,7 +82,8 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
   constructor() {
     super({
       uuid: "fffffffffffffffffffffffffffffff4",
-      properties: ["writeWithoutResponse", "notify"],
+      properties: ["write", "notify"],
+      // properties: ["writeWithoutResponse", "notify"],
     });
     this.writeCount = 0;
     this.completeData = Buffer.alloc(0);
@@ -94,12 +95,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
     this.isReceivedData = false;
 
     console.log(
-      "WriteOnlyCharacteristic write request: " +
-        data.toString("utf-8") +
-        " " +
-        offset +
-        " " +
-        withoutResponse
+      "WriteOnlyCharacteristic write request: " + data.toString("utf-8")
     );
     console.log("Write dataBase64: " + data.toString("base64"));
     console.log("Write request count: " + ++this.writeCount);
@@ -110,6 +106,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
       const completeDataString = this.completeData.toString("base64");
       console.log("Complete data received: " + completeDataString);
       this.completeData = Buffer.alloc(0);
+      this.writeCount = 0;
 
       if (this._updateValueCallback) {
         if (this.isReceivedData) {
@@ -124,6 +121,9 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
 
       callback(this.RESULT_SUCCESS);
     } else {
+      if (this._updateValueCallback) {
+        this._updateValueCallback(Buffer.from(`${null}`, "utf-8"));
+      }
       callback(this.RESULT_CONTINUE);
     }
   }
@@ -131,7 +131,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
   decodeConvertToFile(dataString) {
     const bufferData = Buffer.from(dataString, "base64");
     fs.writeFileSync(
-      "/home/pi3b/Projects/rpi-rgb-led-matrix/Testing/TestVideoImage/output_write.mp4",
+      "/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage/output_write.mp4",
       bufferData,
       "binary"
     );
@@ -156,7 +156,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
       "--led-pwm-dither-bits=1",
       "-f",
       "-F",
-      "/home/pi3b/Projects/rpi-rgb-led-matrix/Testing/TestVideoImage/output_write.mp4",
+      "/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage/output_write.mp4",
       "--led-pwm-bits=9",
       "--led-pwm-lsb-nanoseconds=300",
     ];
