@@ -143,6 +143,8 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
 
         this.decodeConvertToFile(completeDataString);
 
+        this.readIdInJSONString(pathToStoreVideoConfig);
+
         callback(this.RESULT_SUCCESS);
       }
     } catch (error) {
