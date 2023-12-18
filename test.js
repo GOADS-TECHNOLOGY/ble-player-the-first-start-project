@@ -1,4 +1,8 @@
 const bleno = require("./index");
+// import os module
+const os = require("os");
+// get host name
+const hostName = os.hostname();
 
 const BlenoPrimaryService = bleno.PrimaryService;
 const BlenoCharacteristic = bleno.Characteristic;
@@ -314,7 +318,7 @@ bleno.on("stateChange", function (state) {
   console.log("on -> stateChange: " + state + ", address = " + bleno.address);
 
   if (state === "poweredOn") {
-    bleno.startAdvertising("Goads", ["fffffffffffffffffffffffffffffff0"]);
+    bleno.startAdvertising(hostName, ["fffffffffffffffffffffffffffffff0"]);
   } else {
     bleno.stopAdvertising();
   }
