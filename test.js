@@ -5,6 +5,10 @@ const BlenoCharacteristic = bleno.Characteristic;
 const BlenoDescriptor = bleno.Descriptor;
 const { spawn } = require("child_process");
 const fs = require("fs");
+const pathToStoreVideoConfig =
+  "/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage/config.json";
+const pathToStoreVideo =
+  "/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage";
 
 console.log("==================");
 console.log("GoAds BLE Starting");
@@ -108,6 +112,15 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
       this.completeData = Buffer.alloc(0);
       this.writeCount = 0;
 
+      writeDataToJsonFile(pathToStoreVideoConfig, {
+        ID: `GOADS000${Math.floor(Math.random() * 100) + 1}`,
+        Code: 200,
+        Schedule: {
+          time_start: 837248327483,
+          time_end: 84883478437584,
+        },
+      });
+
       if (this._updateValueCallback) {
         if (this.isReceivedData) {
           this.isReceivedData = false;
@@ -120,6 +133,12 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
       // this.decodeConvertToFile(completeDataString);
 
       callback(this.RESULT_SUCCESS);
+    } else if (data.toString("base64") === "RGVsZXRlQ29uZmln") {
+      DeleteFile(pathToStoreVideoConfig);
+      if (this._updateValueCallback) {
+        this._updateValueCallback(Buffer.from(`${null}`, "utf-8"));
+      }
+      callback(this.RESULT_CONTINUE);
     } else {
       if (this._updateValueCallback) {
         this._updateValueCallback(Buffer.from(`${null}`, "utf-8"));
@@ -129,9 +148,6 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
   }
 
   decodeConvertToFile(dataString) {
-    const pathToStoreVideo =
-      "/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage";
-
     if (!fs.existsSync(pathToStoreVideo)) {
       fs.mkdirSync(pathToStoreVideo, { recursive: true });
     } else {
@@ -341,3 +357,31 @@ bleno.on("advertisingStop", function () {
 bleno.on("servicesSet", function (error) {
   console.log("on -> servicesSet: " + (error ? "error " + error : "success"));
 });
+
+const writeDataToJsonFile = (path, data) => {
+  // Check file exist
+  if (fs.existsSync(path)) {
+    // If exit, read data from the file
+    const rawData = fs.readFileSync(path);
+
+    const currentData = JSON.parse(rawData) || [];
+    // Add new data
+    const newData = [...currentData, data];
+    // Update new data to the file
+    fs.writeFileSync(path, JSON.stringify(newData));
+    console.log("Dữ liệu đã được cập nhật vào file.");
+  } else {
+    // If file is not exist, create and add data to it
+    fs.writeFileSync(path, JSON.stringify([data]));
+    console.log("File mới đã được tạo và dữ liệu đã được thêm vào.");
+  }
+};
+
+const DeleteFile = (path) => {
+  // Check file exist
+  if (fs.existsSync(path)) {
+    // Delete file
+    fs.unlinkSync(path);
+    console.log("Dữ liệu đã được xóa khỏi file.");
+  }
+};
