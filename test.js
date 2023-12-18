@@ -110,35 +110,49 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
 
     this.completeData = Buffer.concat([this.completeData, data]);
 
-    if (data.toString("base64") === "U3VjY2Vzc2Z1bGx5") {
-      const completeDataString = this.completeData.toString("base64");
-      console.log("Complete data received: " + completeDataString);
-      this.completeData = Buffer.alloc(0);
-      this.writeCount = 0;
+    try {
+      const convertObj = JSON.parse(String(data.toString("utf-8")));
 
-      this.readIdInJSONString('/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage/config.json');
-      writeDataToJsonFile(pathToStoreVideoConfig, {
-        ID: `GOADS000${Math.floor(Math.random() * 100) + 1}`,
-        Code: 200,
-        Schedule: {
-          time_start: 837248327483,
-          time_end: 84883478437584,
-        },
-      });
+      if (convertObj?.Code === 200) {
+        const completeDataString = this.completeData.toString("base64");
+        console.log("Complete data received: " + completeDataString);
+        this.completeData = Buffer.alloc(0);
+        this.writeCount = 0;
 
-      if (this._updateValueCallback) {
-        if (this.isReceivedData) {
-          this.isReceivedData = false;
-        } else {
-          this._updateValueCallback(Buffer.from(`${200}`, "utf-8"));
-          this.isReceivedData = true;
+        // This code is use for testing, in production with be changed to comfortably
+        // --------------------------------------------------------------------------------
+        const videoID = `goads00${Math.floor(Math.random() * 100) + 1}`;
+        // new data will receive from mobile devices and replace
+        writeDataToJsonFile(pathToStoreVideoConfig, {
+          ID: videoID,
+          Code: 200,
+          Schedule: {
+            time_start: 837248327483,
+            time_end: 84883478437584,
+          },
+        });
+
+        if (this._updateValueCallback) {
+          if (this.isReceivedData) {
+            this.isReceivedData = false;
+          } else {
+            this._updateValueCallback(Buffer.from(`${200}`, "utf-8"));
+            this.isReceivedData = true;
+          }
         }
+
+        this.decodeConvertToFile(completeDataString);
+
+        this.readIdInJSONString(pathToStoreVideoConfig);
+
+        callback(this.RESULT_SUCCESS);
       }
+    } catch (error) {
+      // console.error(error);
+    }
+    // --------------------------------------------------------------------------------
 
-      // this.decodeConvertToFile(completeDataString);
-
-      callback(this.RESULT_SUCCESS);
-    } else if (data.toString("base64") === "RGVsZXRlQ29uZmln") {
+    if (data.toString("base64") === "RGVsZXRlQ29uZmln") {
       DeleteFile(pathToStoreVideoConfig);
       if (this._updateValueCallback) {
         this._updateValueCallback(Buffer.from(`${null}`, "utf-8"));
@@ -220,26 +234,28 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
 
   readIdInJSON(fileName) {
     // Read file JSON
-    const fs = require('fs');
+    const fs = require("fs");
     // const fileName = '/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage/';
-    fs.readFile(fileName, 'utf8', (err, data) => {
+    fs.readFile(fileName, "utf8", (err, data) => {
       if (err) {
-        console.error('Error occurred while reading the file:', err);
+        console.error("Error occurred while reading the file:", err);
         return;
       }
-    
+
       try {
         // Parse JSON content into a JavaScript object
         const jsonObject = JSON.parse(data);
-    
+
         // Get ID from JSON object
         const id = jsonObject.id;
-    
+
         // Print the ID to the screen or perform other operations with the ID
-        console.log('ID from JSON file:', id);
-    
+        console.log("ID from JSON file:", id);
       } catch (jsonError) {
-        console.error('Error occurred while parsing the JSON content:', jsonError);
+        console.error(
+          "Error occurred while parsing the JSON content:",
+          jsonError
+        );
       }
     });
   }
