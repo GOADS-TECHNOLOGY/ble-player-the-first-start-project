@@ -110,34 +110,47 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
 
     this.completeData = Buffer.concat([this.completeData, data]);
 
-    if (data.toString("base64") === "U3VjY2Vzc2Z1bGx5") {
-      const completeDataString = this.completeData.toString("base64");
-      console.log("Complete data received: " + completeDataString);
-      this.completeData = Buffer.alloc(0);
-      this.writeCount = 0;
+    try {
+      const convertObj = JSON.parse(String(data.toString("utf-8")));
 
-      writeDataToJsonFile(pathToStoreVideoConfig, {
-        ID: `GOADS000${Math.floor(Math.random() * 100) + 1}`,
-        Code: 200,
-        Schedule: {
-          time_start: 837248327483,
-          time_end: 84883478437584,
-        },
-      });
+      if (convertObj?.Code === 200) {
+        const completeDataString = this.completeData.toString("base64");
+        console.log("Complete data received: " + completeDataString);
+        this.completeData = Buffer.alloc(0);
+        this.writeCount = 0;
 
-      if (this._updateValueCallback) {
-        if (this.isReceivedData) {
-          this.isReceivedData = false;
-        } else {
-          this._updateValueCallback(Buffer.from(`${200}`, "utf-8"));
-          this.isReceivedData = true;
+        // This code is use for testing, in production with be changed to comfortably
+        // --------------------------------------------------------------------------------
+        const videoID = `goads00${Math.floor(Math.random() * 100) + 1}`;
+        // new data will receive from mobile devices and replace
+        writeDataToJsonFile(pathToStoreVideoConfig, {
+          ID: videoID,
+          Code: 200,
+          Schedule: {
+            time_start: 837248327483,
+            time_end: 84883478437584,
+          },
+        });
+
+        if (this._updateValueCallback) {
+          if (this.isReceivedData) {
+            this.isReceivedData = false;
+          } else {
+            this._updateValueCallback(Buffer.from(`${200}`, "utf-8"));
+            this.isReceivedData = true;
+          }
         }
+
+        // this.decodeConvertToFile(completeDataString);
+
+        callback(this.RESULT_SUCCESS);
       }
+    } catch (error) {
+      // console.error(error);
+    }
+    // --------------------------------------------------------------------------------
 
-      // this.decodeConvertToFile(completeDataString);
-
-      callback(this.RESULT_SUCCESS);
-    } else if (data.toString("base64") === "RGVsZXRlQ29uZmln") {
+    if (data.toString("base64") === "RGVsZXRlQ29uZmln") {
       DeleteFile(pathToStoreVideoConfig);
       if (this._updateValueCallback) {
         this._updateValueCallback(Buffer.from(`${null}`, "utf-8"));
