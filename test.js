@@ -116,6 +116,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
       this.completeData = Buffer.alloc(0);
       this.writeCount = 0;
 
+      this.readIdInJSONString('/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage/config.json');
       writeDataToJsonFile(pathToStoreVideoConfig, {
         ID: `GOADS000${Math.floor(Math.random() * 100) + 1}`,
         Code: 200,
@@ -215,6 +216,32 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
 
   onSubscribe(maxValueSize, updateValueCallback) {
     this._updateValueCallback = updateValueCallback;
+  }
+
+  readIdInJSON(fileName) {
+    // Read file JSON
+    const fs = require('fs');
+    // const fileName = '/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage/';
+    fs.readFile(fileName, 'utf8', (err, data) => {
+      if (err) {
+        console.error('Error occurred while reading the file:', err);
+        return;
+      }
+    
+      try {
+        // Parse JSON content into a JavaScript object
+        const jsonObject = JSON.parse(data);
+    
+        // Get ID from JSON object
+        const id = jsonObject.id;
+    
+        // Print the ID to the screen or perform other operations with the ID
+        console.log('ID from JSON file:', id);
+    
+      } catch (jsonError) {
+        console.error('Error occurred while parsing the JSON content:', jsonError);
+      }
+    });
   }
 }
 
