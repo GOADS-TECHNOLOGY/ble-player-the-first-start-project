@@ -110,31 +110,24 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
 
     this.completeData = Buffer.concat([this.completeData, data]);
 
-    if (data.toString("base64") === "U3VjY2Vzc2Z1bGx5") {
-      const completeDataString = this.completeData.toString("base64");
-      console.log("Complete data received: " + completeDataString);
-      this.completeData = Buffer.alloc(0);
-      this.writeCount = 0;
+    try {
+      const convertObj = JSON.parse(String(data.toString("utf-8")));
 
-      this.readIdInJSONString(pathToStoreVideoConfig);
+      if (convertObj?.Code === 200) {
+        const completeDataString = this.completeData.toString("base64");
+        console.log("Complete data received: " + completeDataString);
+        this.completeData = Buffer.alloc(0);
+        this.writeCount = 0;
 
-
-      const idVideo = `GOADS000${Math.floor(Math.random() * 100) + 1}`
-
+      this.readIdInJSONString('/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage/config.json');
       writeDataToJsonFile(pathToStoreVideoConfig, {
-        ID: idVideo,
+        ID: `GOADS000${Math.floor(Math.random() * 100) + 1}`,
         Code: 200,
         Schedule: {
           time_start: 837248327483,
           time_end: 84883478437584,
         },
       });
-
-
-      this.decodeConvertToFile(completeDataString, idVideo);
-      this.readIdInJSON(fileName);
-
-
 
       if (this._updateValueCallback) {
         if (this.isReceivedData) {
@@ -144,6 +137,9 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
           this.isReceivedData = true;
         }
       }
+
+      // this.decodeConvertToFile(completeDataString);
+
       callback(this.RESULT_SUCCESS);
     } else if (data.toString("base64") === "RGVsZXRlQ29uZmln") {
       DeleteFile(pathToStoreVideoConfig);
@@ -225,24 +221,30 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
     this._updateValueCallback = updateValueCallback;
   }
 
-  parseIdObjectJSON(object) {
-    try{
-        const videoID = object.ID;
-        const code = object.Code;
-        const schedule = object.Schedule;
-        
-        console.log('ID:', videoID);
-        console.log('Code:', code);
-        console.log('Schedule:', schedule);
-        // Accessing properties within Schedule
-        const timeStart = schedule.time_start;
-        const timeEnd = schedule.time_end;
-
-        console.log('Time Start:', timeStart);
-        console.log('Time End: ',  timeEnd);
-    } catch (err) {
-        console.error(err);
-    };
+  readIdInJSON(fileName) {
+    // Read file JSON
+    const fs = require('fs');
+    // const fileName = '/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage/';
+    fs.readFile(fileName, 'utf8', (err, data) => {
+      if (err) {
+        console.error('Error occurred while reading the file:', err);
+        return;
+      }
+    
+      try {
+        // Parse JSON content into a JavaScript object
+        const jsonObject = JSON.parse(data);
+    
+        // Get ID from JSON object
+        const id = jsonObject.id;
+    
+        // Print the ID to the screen or perform other operations with the ID
+        console.log('ID from JSON file:', id);
+    
+      } catch (jsonError) {
+        console.error('Error occurred while parsing the JSON content:', jsonError);
+      }
+    });
   }
 }
 
