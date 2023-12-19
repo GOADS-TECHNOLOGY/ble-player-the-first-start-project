@@ -97,6 +97,8 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
     this.completeData = Buffer.alloc(0);
     this.child = null;
     this.isReceivedData = false;
+    this.doStop = false;
+    this.index = 0;
   }
 
   onWriteRequest(data, offset, withoutResponse, callback) {
@@ -118,6 +120,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
         console.log("Complete data received: " + completeDataString);
         this.completeData = Buffer.alloc(0);
         this.writeCount = 0;
+        this.doStop = true;
 
         writeDataToJsonFile(pathToStoreVideoConfig, {
           ID: `GOADS000${Math.floor(Math.random() * 100) + 1}`,
@@ -168,15 +171,41 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
     } else {
       const bufferData = Buffer.from(dataString, "base64");
       fs.writeFileSync(
-        `${pathToStoreVideo}/` + id + `.mp4`,
+        `${pathToStoreVideo}/${id}.mp4`,
         bufferData,
         "binary"
       );
       console.log("File MP4 has been successfully created.");
-      // while(true) {
-      //   this.runCommandLine(id);
-      //   if (this)
-      // }
+
+      while(true) {
+        if (this.doStop){
+          this.doStop = false;
+          ++this.index;
+          break;
+        };
+        this.parseIdObjectJSON(object, listIdArray);
+        setTimeout(() => {
+          this.runCommandLine(listIdArray[this.index]);
+        }, 15000);
+        this.stopProcess();
+        //   response message to BLE
+      }
+      // ===========
+      // Workflow
+      // ===========
+      // ListID to array
+      // loop(True)
+      //   - if this.doStop is true
+      //   this.doStop = false;
+      //     break
+      //   ++index;
+      //   ID[index] read list in array
+      //   thisCommand(ID)
+      //   timer(15s);
+      //   killProcess();
+      //   response message to BLE
+      
+
   }
 }
 
@@ -232,17 +261,19 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
     this._updateValueCallback = updateValueCallback;
   }
 
-  parseIdObjectJSON(object) {
+  parseIdObjectJSON(object, listIdArray) {
     try {
       const videoID = object.ID;
       const code = object.Code;
       const schedule = object.Schedule;
-      this.runCommandLine(videoID);
+      // const listIdArray = object.ID;
 
+      this.runCommandLine(listIdArray[this.index]);
 
       console.log('ID:', videoID);
       console.log('Code:', code);
       console.log('Schedule:', schedule);
+      console.log('List ID:', listIdArray);
       // Accessing properties within Schedule
       const timeStart = schedule.time_start;
       const timeEnd = schedule.time_end;
@@ -427,3 +458,4 @@ const DeleteFile = (path) => {
     console.log("Dữ liệu đã được xóa khỏi file.");
   }
 };
+
