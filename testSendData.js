@@ -11,8 +11,6 @@ const { spawn } = require("child_process");
 const fs = require("fs");
 const pathToStoreVideoConfig =
   "/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage/config.json";
-const pathToStoreVideoLog =
-  "/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage/logVideo.json";
 const pathToStoreVideo =
   "/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage";
 
@@ -131,7 +129,21 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
           this.completeData = Buffer.alloc(0);
           this.writeCount = 0;
 
-          writeDataConfigVideoToJsonFile(pathToStoreVideoConfig, convertObj);
+          writeDataToJsonFile(pathToStoreVideoConfig, convertObj);
+
+          // writeDataToJsonFile(pathToStoreVideoConfig, {
+          //   ID: videoID,
+          //   Code: 200,
+          //   Schedule: {
+          //     time_start: 837248327483,
+          //     time_end: 84883478437584,
+          //   },
+          // });
+
+          // this.parseIdObjectJSON(pathToStoreVideoConfig);
+
+          this.decodeConvertToFile(completeDataString, videoID);
+          this.runPlaylistVideo(pathToStoreVideoConfig);
 
           if (this._updateValueCallback) {
             if (this.isReceivedData) {
@@ -142,25 +154,63 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
             }
           }
 
-          // writeDataConfigVideoToJsonFile(pathToStoreVideoConfig, {
-          //   ID: videoID,
-          //   Code: 200,
-          //   Schedule: {
-          //     time_start: 837248327483,
-          //     time_end: 84883478437584,
-          //   },
-          // });
-
-          this.decodeConvertToFile(completeDataString, videoID);
-          this.runPlaylistVideo(pathToStoreVideoConfig);
-
           callback(this.RESULT_SUCCESS);
         }
       }
     } catch (error) {}
 
-    if (data.toString("base64") === "UGxheUxpc3RWaWRlbw==") {
-      this.runPlaylistVideo(pathToStoreVideoConfig);
+    if (data.toString("base64") === "U3VjY2Vzc2Z1bGx5") {
+      const stopIntervalPlayList = () => {
+        if (this.playlistInterval) {
+          clearInterval(this.playlistInterval);
+          this.playlistInterval = null;
+        }
+      };
+      const runPlayListVideo = (path) => {
+        console.log("Func runPlayListVideo");
+
+        this.playlistInterval = setInterval(
+          function () {
+            console.log("Running interval");
+            if (fs.existsSync(path)) {
+              const rawData = fs.readFileSync(path);
+              const videoList = JSON.parse(rawData) || [];
+              console.log(
+                "log this.previousQuantityVideo: ",
+                this.previousQuantityVideo
+              );
+
+              if (this.previousQuantityVideo === videoList.length) {
+                const videoIdWillPlay =
+                  videoList[this.currentIndexVideoRunning]?.ID;
+                console.log("log videoIdWillPlay: ", videoIdWillPlay);
+                this.runCommandLine(videoIdWillPlay);
+
+                if (this.currentIndexVideoRunning === videoList.length - 1) {
+                  this.currentIndexVideoRunning = 0;
+                } else {
+                  this.currentIndexVideoRunning =
+                    this.currentIndexVideoRunning + 1;
+                }
+              } else {
+                this.stopProcess();
+                console.log("Clear interval");
+
+                stopIntervalPlayList();
+                console.log("Running first list");
+                this.previousQuantityVideo = videoList.length;
+                this.currentIndexVideoRunning = 0;
+                this.runCommandLine(videoList[0]?.ID);
+              }
+            } else {
+              console.log("No config.json file");
+            }
+          }.bind(this),
+          15000
+        );
+      };
+
+      runPlayListVideo(pathToStoreVideoConfig);
     }
 
     if (data.toString("base64") === "RGVsZXRlQ29uZmln") {
@@ -184,6 +234,10 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
       const bufferData = Buffer.from(dataString, "base64");
       fs.writeFileSync(`${pathToStoreVideo}/${id}.mp4`, bufferData, "binary");
       console.log("File MP4 has been successfully created.");
+      // while(true) {
+      //   this.runCommandLine(id);
+      //   if (this)
+      // }
     }
   }
 
@@ -212,18 +266,18 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
     ];
 
     // Spawn the process
-    this.child = spawn(command, args);
+    const child = spawn(command, args);
 
     // Handle output
-    this.child.stdout.on("data", (data) => {
+    child.stdout.on("data", (data) => {
       console.log(`stdout: ${data}`);
     });
 
-    this.child.stderr.on("data", (data) => {
+    child.stderr.on("data", (data) => {
       console.error(`stderr: ${data}`);
     });
 
-    this.child.on("close", (code) => {
+    child.on("close", (code) => {
       console.log(`child process exited with code ${code}`);
     });
   }
@@ -240,111 +294,99 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
     this._updateValueCallback = updateValueCallback;
   }
 
-  stopIntervalPlayList() {
-    if (this.playlistInterval) {
-      clearInterval(this.playlistInterval);
-      this.playlistInterval = null;
+  parseIdObjectJSON(object) {
+    try {
+      const videoID = object.ID;
+      const code = object.Code;
+      const schedule = object.Schedule;
+      this.runCommandLine(videoID);
+
+      console.log("ID:", videoID);
+      console.log("Code:", code);
+      console.log("Schedule:", schedule);
+      // Accessing properties within Schedule
+      const timeStart = schedule.time_start;
+      const timeEnd = schedule.time_end;
+
+      console.log("Time Start:", timeStart);
+      console.log("Time End: ", timeEnd);
+    } catch (err) {
+      console.error(err);
     }
   }
 
-  runPlaylistVideo(path) {
-    this.playlistInterval = setInterval(
-      function () {
-        if (fs.existsSync(path)) {
-          const rawData = fs.readFileSync(path);
-          const videoList = JSON.parse(rawData) || [];
+  // runPlaylistVideo(path) {
+  //   console.log("Running play list")
+  //   if (fs.existsSync(path)) {
+  //     const rawData = fs.readFileSync(path);
+  //     const videoList = JSON.parse(rawData) || [];
+  //     console.log('log videoList: ', videoList);
 
-          if (this.previousQuantityVideo === videoList.length) {
-            const videoIdWillPlay =
-              videoList[this.currentIndexVideoRunning]?.ID;
+  //     if (this.previousQuantityVideo === videoList.length) {
+  //       const videoIdWillPlay = videoList[this.currentIndexVideoRunning]?.ID;
+  //       console.log("log videoIdWillPlay: ", videoIdWillPlay);
+  //       this.runCommandLine(videoIdWillPlay);
+  //       this.currentIndexVideoRunning = this.currentIndexVideoRunning +1;
+  //     } else {
+  //       this.stopProcess();
+  //     console.log("Clear interval")
 
-            console.log("Name video play: ", videoIdWillPlay);
-            console.log("Index video: ", this.currentIndexVideoRunning);
+  //       this.stopIntervalPlayList();
+  //     console.log("Running first list")
+  //       this.previousQuantityVideo = videoList.length;
+  //       this.currentIndexVideoRunning = 0;
+  //       this.runCommandLine(videoList[0]?.ID);
+  //     }
+  //   } else {
+  //     console.log("No config.json file");
+  //   }
+  // }
 
-            this.stopProcess();
+  // runPlayListVideo(path) {
+  //       console.log("Func runPlayListVideo");
 
-            const logVideoById = getLogVideoById(
-              pathToStoreVideoLog,
-              videoIdWillPlay
-            );
+  //   this.playlistInterval = setInterval(
+  //     function () {
+  //       console.log("Running interval");
+  //       if (fs.existsSync(path)) {
+  //         const rawData = fs.readFileSync(path);
+  //         const videoList = JSON.parse(rawData) || [];
+  //         console.log("log videoList: ", videoList.length);
+  //         console.log(
+  //           "log this.previousQuantityVideo: ",
+  //           this.previousQuantityVideo
+  //         );
 
-            if (logVideoById) {
-              const newLogData = {
-                ...logVideoById,
-                label: {
-                  ...logVideoById.label,
-                  displayCount: logVideoById?.label?.displayCount + 1,
-                },
-              };
-              console.log("log newLogData: ", newLogData);
+  //         if (this.previousQuantityVideo === videoList.length) {
+  //           const videoIdWillPlay =
+  //             videoList[this.currentIndexVideoRunning]?.ID;
+  //           console.log("log videoIdWillPlay: ", videoIdWillPlay);
+  //           this.runCommandLine(videoIdWillPlay);
+  //           this.currentIndexVideoRunning = this.currentIndexVideoRunning + 1;
+  //         } else {
+  //           this.stopProcess();
+  //           console.log("Clear interval");
 
-              writeLogRunVideo(pathToStoreVideoLog, newLogData);
-            } else {
-              writeLogRunVideo(pathToStoreVideoLog, {
-                ID: videoIdWillPlay,
-                label: {
-                  person: 1,
-                  car: 3,
-                  motocycle: 4,
-                  timestamp: 131232132131,
-                  displayCount: logVideoById?.label?.displayCount + 1,
-                },
-              });
-            }
+  //           this.stopIntervalPlayList();
+  //           console.log("Running first list");
+  //           this.previousQuantityVideo = videoList.length;
+  //           this.currentIndexVideoRunning = 0;
+  //           this.runCommandLine(videoList[0]?.ID);
+  //         }
+  //       } else {
+  //         console.log("No config.json file");
+  //       }
+  //     }.bind(this),
+  //     15000
+  //   );
+  // }
 
-            this.runCommandLine(videoIdWillPlay);
-
-            if (this.currentIndexVideoRunning === videoList.length - 1) {
-              this.currentIndexVideoRunning = 0;
-            } else {
-              this.currentIndexVideoRunning = this.currentIndexVideoRunning + 1;
-            }
-          } else {
-            if (this.previousQuantityVideo !== 0) {
-              console.log("Clear interval");
-              this.stopIntervalPlayList();
-            }
-
-            console.log("Run Play List Again");
-            this.previousQuantityVideo = videoList.length;
-            this.currentIndexVideoRunning = 1;
-            this.stopProcess();
-
-            const logVideoById = getLogVideoById(
-              pathToStoreVideoLog,
-              videoList[0]?.ID
-            );
-
-            if (logVideoById) {
-              writeLogRunVideo(pathToStoreVideoLog, {
-                ...logVideoById,
-                label: {
-                  ...logVideoById.label,
-                  displayCount: logVideoById?.label?.displayCount || 0 + 1,
-                },
-              });
-            } else {
-              writeLogRunVideo(pathToStoreVideoLog, {
-                ID: videoList[0]?.ID,
-                label: {
-                  person: 1,
-                  car: 3,
-                  motocycle: 4,
-                  timestamp: 131232132131,
-                  displayCount: logVideoById?.label?.displayCount || 0 + 1,
-                },
-              });
-            }
-
-            this.runCommandLine(videoList[0]?.ID);
-          }
-        } else {
-          console.log("No config.json file");
-        }
-      }.bind(this),
-      15000
-    );
-  }
+  // stopIntervalPlayList() {
+  //   if (this.playlistInterval) {
+  //     clearInterval(this.playlistInterval);
+  //     this.playlistInterval = null;
+  //   }
+  // }
 }
 
 module.exports = WriteOnlyCharacteristic;
@@ -363,8 +405,15 @@ class NotifyOnlyCharacteristic extends BlenoCharacteristic {
     this.counter = 0;
     this.changeInterval = setInterval(
       function () {
-        const data = Buffer.alloc(4);
-        data.writeUInt32LE(this.counter, 0);
+        const data = {
+          ID: "abc",
+          label: {
+            person: 1,
+            car: 3,
+            motocycle: 4,
+            timestamp: 131232132131,
+          },
+        };
 
         console.log("NotifyOnlyCharacteristic update value: " + this.counter);
         updateValueCallback(data);
@@ -491,7 +540,7 @@ bleno.on("servicesSet", function (error) {
   console.log("on -> servicesSet: " + (error ? "error " + error : "success"));
 });
 
-const writeDataConfigVideoToJsonFile = (path, data) => {
+const writeDataToJsonFile = (path, data) => {
   // Check file exist
   if (fs.existsSync(path)) {
     // If exit, read data from the file
@@ -513,60 +562,6 @@ const writeDataConfigVideoToJsonFile = (path, data) => {
     // If file is not exist, create and add data to it
     fs.writeFileSync(path, JSON.stringify([data]));
     console.log("File mới đã được tạo và dữ liệu đã được thêm vào.");
-  }
-};
-
-const writeLogRunVideo = (path, newLog) => {
-  console.log("Write Video Log.");
-
-  // Check file exist
-  if (fs.existsSync(path)) {
-    // If exit, read data from the file
-    const rawData = fs.readFileSync(path);
-
-    const currentData = JSON.parse(rawData) || [];
-
-    const arrayCheckDuplicateID = currentData?.filter(
-      (video) => video.ID === newLog.ID
-    );
-    if (arrayCheckDuplicateID.length === 0) {
-      // Add new data
-      const newData = [...currentData, newLog];
-      // Update new data to the file
-      fs.writeFileSync(path, JSON.stringify(newData));
-    } else {
-      const newLogData = currentData.map((element) => {
-        if (element.ID === newLog.ID) {
-          return {
-            ...element,
-            displayCount: newLog.displayCount,
-          };
-        } else {
-          return element;
-        }
-      });
-
-      fs.writeFileSync(path, JSON.stringify(newLogData));
-    }
-
-    console.log("File log đã được cập nhật vào file.");
-  } else {
-    // If file is not exist, create and add data to it
-    fs.writeFileSync(path, JSON.stringify([newLog]));
-    console.log("File log mới đã được tạo và thêm dữ liệu.");
-  }
-};
-
-const getLogVideoById = (path, id) => {
-  // Check file exist
-  if (fs.existsSync(path)) {
-    // If exit, read data from the file
-    const rawData = fs.readFileSync(path);
-
-    const currentData = JSON.parse(rawData) || [];
-    return currentData.find((element) => element.ID === id);
-  } else {
-    return undefined;
   }
 };
 
@@ -599,3 +594,7 @@ const DeleteFile = (path) => {
     console.log("Dữ liệu đã được xóa khỏi file.");
   }
 };
+
+// const RunPlaylistVideo = () => {
+
+// }
