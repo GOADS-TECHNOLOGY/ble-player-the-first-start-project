@@ -8,7 +8,6 @@ const BlenoPrimaryService = bleno.PrimaryService;
 const BlenoCharacteristic = bleno.Characteristic;
 const BlenoDescriptor = bleno.Descriptor;
 const { spawn } = require("child_process");
-
 const fs = require("fs");
 const pathToStoreVideoConfig =
   "/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage/config.json";
@@ -98,8 +97,9 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
     this.completeData = Buffer.alloc(0);
     this.child = null;
     this.isReceivedData = false;
-    this.doStop = false;
-    this.index = 0;
+    this.currentIndexVideoRunning = 0;
+    this.previousQuantityVideo = 0;
+    this.playlistInterval = null;
   }
 
   onWriteRequest(data, offset, withoutResponse, callback) {
@@ -117,39 +117,35 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
       const convertObj = JSON.parse(String(data.toString("utf-8")));
 
       if (convertObj?.Code === 200) {
-        const completeDataString = this.completeData.toString("base64");
-        console.log("Complete data received: " + completeDataString);
-        this.completeData = Buffer.alloc(0);
-        this.writeCount = 0;
-        this.doStop = true;
+        console.log("log convertObj: ", convertObj);
 
-        writeDataToJsonFile(pathToStoreVideoConfig, {
-          ID: `GOADS000${Math.floor(Math.random() * 100) + 1}`,
-          Code: 200,
-          Schedule: {
-            time_start: 837248327483,
-            time_end: 84883478437584,
-          },
-        });
+        // const videoID = `goads00${Math.floor(Math.random() * 10) + 1}`;
 
-        if (this._updateValueCallback) {
-          if (this.isReceivedData) {
-            this.isReceivedData = false;
-          } else {
-            this._updateValueCallback(Buffer.from(`${200}`, "utf-8"));
-            this.isReceivedData = true;
+        const videoID = convertObj?.ID;
+
+        if (!checkIdVideoExistInConfig(videoID, pathToStoreVideoConfig)) {
+          const completeDataString = this.completeData.toString("base64");
+          console.log("Complete data received: " + completeDataString);
+          this.completeData = Buffer.alloc(0);
+          this.writeCount = 0;
+
+          writeDataToJsonFile(pathToStoreVideoConfig, convertObj);
+          this.decodeConvertToFile(completeDataString, videoID);
+          this.runPlaylistVideo(pathToStoreVideoConfig);
+
+          if (this._updateValueCallback) {
+            if (this.isReceivedData) {
+              this.isReceivedData = false;
+            } else {
+              this._updateValueCallback(Buffer.from(`${200}`, "utf-8"));
+              this.isReceivedData = true;
+            }
           }
+
+          callback(this.RESULT_SUCCESS);
         }
-
-        this.decodeConvertToFile(completeDataString);
-        this.runPlaylistVideo(pathToStoreVideoConfig);
-
-        callback(this.RESULT_SUCCESS);
       }
-
-    } catch (error) {
-      console.error(error);
-    }
+    } catch (error) {}
 
     if (data.toString("base64") === "U3VjY2Vzc2Z1bGx5") {
       const stopIntervalPlayList = () => {
@@ -225,14 +221,10 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
       fs.mkdirSync(pathToStoreVideo, { recursive: true });
     } else {
       const bufferData = Buffer.from(dataString, "base64");
-      fs.writeFileSync(
-        `${pathToStoreVideo}/${id}.mp4`,
-        bufferData,
-        "binary" 
-      );
+      fs.writeFileSync(`${pathToStoreVideo}/${id}.mp4`, bufferData, "binary");
+      console.log("File MP4 has been successfully created.");
+    }
   }
-}
-
 
   runCommandLine(id) {
     // Terminate any existing process
@@ -251,7 +243,9 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
       "--led-pwm-dither-bits=1",
       "-f",
       "-F",
-      "/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage/" + id + ".mp4",
+      "/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage/" +
+        id +
+        ".mp4",
       "--led-pwm-bits=9",
       "--led-pwm-lsb-nanoseconds=300",
     ];
@@ -284,9 +278,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
   onSubscribe(maxValueSize, updateValueCallback) {
     this._updateValueCallback = updateValueCallback;
   }
-
 }
-
 
 module.exports = WriteOnlyCharacteristic;
 
@@ -439,24 +431,21 @@ const writeDataToJsonFile = (path, data) => {
     const rawData = fs.readFileSync(path);
 
     const currentData = JSON.parse(rawData) || [];
-    // Add new data
-    const newData = [...currentData, data];
-    // Update new data to the file
-    fs.writeFileSync(path, JSON.stringify(newData));
-    console.log("Dữ liệu đã được cập nhật vào file.");
+
+    const arrayCheckDuplicateID = currentData?.filter(
+      (video) => video.ID === data.ID
+    );
+    if (arrayCheckDuplicateID.length === 0) {
+      // Add new data
+      const newData = [...currentData, data];
+      // Update new data to the file
+      fs.writeFileSync(path, JSON.stringify(newData));
+      console.log("Dữ liệu đã được cập nhật vào file.");
+    }
   } else {
     // If file is not exist, create and add data to it
     fs.writeFileSync(path, JSON.stringify([data]));
     console.log("File mới đã được tạo và dữ liệu đã được thêm vào.");
-  }
-};
-
-const DeleteFile = (path) => {
-  // Check file exist
-  if (fs.existsSync(path)) {
-    // Delete file
-    fs.unlinkSync(path);
-    console.log("Dữ liệu đã được xóa khỏi file.");
   }
 };
 
@@ -481,5 +470,15 @@ const checkIdVideoExistInConfig = (id, path) => {
   }
 };
 
-//////////////////////////////////Testing functions////////////////////////////////
-//////////////////////////////////Play & KillProcess Video////////////////////////////////
+const DeleteFile = (path) => {
+  // Check file exist
+  if (fs.existsSync(path)) {
+    // Delete file
+    fs.unlinkSync(path);
+    console.log("Dữ liệu đã được xóa khỏi file.");
+  }
+};
+
+// const RunPlaylistVideo = () => {
+
+// }
