@@ -196,7 +196,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
     const command = "sudo";
     const args = [
       "/home/pi3b/Projects/rpi-rgb-led-matrix/utils/video-viewer",
-      "--led-brightness=70",
+      "--led-brightness=80",
       "--led-show-refresh",
       "--led-rows=64",
       "--led-cols=128",
@@ -207,8 +207,8 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
       "/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage/" +
         id +
         ".mp4",
-      "--led-pwm-bits=9",
-      "--led-pwm-lsb-nanoseconds=300",
+      "--led-pwm-bits=10",
+      "--led-pwm-lsb-nanoseconds=350",
     ];
 
     // Spawn the process
@@ -278,13 +278,33 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
                   displayCount: logVideoById?.label?.displayCount + 1,
                 },
               };
+
               if (this._updateValueCallback) {
                 this._updateValueCallback(
                   Buffer.from(JSON.stringify(newLogData), "utf-8")
                 );
               }
+
               writeLogRunVideo(pathToStoreVideoLog, newLogData);
             } else {
+              if (this._updateValueCallback) {
+                this._updateValueCallback(
+                  Buffer.from(
+                    JSON.stringify({
+                      ID: videoIdWillPlay,
+                      label: {
+                        person: 1,
+                        car: 3,
+                        motocycle: 4,
+                        timestamp: 131232132131,
+                        displayCount: logVideoById?.label?.displayCount + 1,
+                      },
+                    }),
+                    "utf-8"
+                  )
+                );
+              }
+
               writeLogRunVideo(pathToStoreVideoLog, {
                 ID: videoIdWillPlay,
                 label: {
@@ -322,7 +342,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
 
             if (logVideoById) {
               writeLogRunVideo(pathToStoreVideoLog, {
-                ...logVideoById,
+                ID: videoList[0]?.ID,
                 label: {
                   ...logVideoById.label,
                   displayCount: logVideoById?.label?.displayCount + 1,
