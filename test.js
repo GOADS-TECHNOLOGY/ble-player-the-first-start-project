@@ -258,8 +258,10 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
             const videoIdWillPlay =
               videoList[this.currentIndexVideoRunning]?.ID;
 
+            //-----------------will remove code inside------------------------------
             console.log("Name video play: ", videoIdWillPlay);
             console.log("Index video: ", this.currentIndexVideoRunning);
+            //-----------------will remove code inside------------------------------
 
             this.stopProcess();
 
@@ -276,8 +278,11 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
                   displayCount: logVideoById?.label?.displayCount + 1,
                 },
               };
-              console.log("log newLogData: ", newLogData);
-
+              if (this._updateValueCallback) {
+                this._updateValueCallback(
+                  Buffer.from(JSON.stringify(newLogData), "utf-8")
+                );
+              }
               writeLogRunVideo(pathToStoreVideoLog, newLogData);
             } else {
               writeLogRunVideo(pathToStoreVideoLog, {
@@ -320,7 +325,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
                 ...logVideoById,
                 label: {
                   ...logVideoById.label,
-                  displayCount: logVideoById?.label?.displayCount || 0 + 1,
+                  displayCount: logVideoById?.label?.displayCount + 1,
                 },
               });
             } else {
@@ -331,7 +336,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
                   car: 3,
                   motocycle: 4,
                   timestamp: 131232132131,
-                  displayCount: logVideoById?.label?.displayCount || 0 + 1,
+                  displayCount: logVideoById?.label?.displayCount + 1,
                 },
               });
             }
@@ -537,14 +542,16 @@ const writeLogRunVideo = (path, newLog) => {
     } else {
       const newLogData = currentData.map((element) => {
         if (element.ID === newLog.ID) {
+          console.log("log newLog: ", newLog);
           return {
             ...element,
-            displayCount: newLog.displayCount,
+            ...newLog,
           };
         } else {
           return element;
         }
       });
+      console.log("log newLogData: ", newLogData);
 
       fs.writeFileSync(path, JSON.stringify(newLogData));
     }
