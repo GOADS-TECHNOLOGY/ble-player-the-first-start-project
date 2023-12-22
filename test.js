@@ -22,6 +22,230 @@ console.log("==================");
 
 console.log(bleno.PrimaryService);
 
+class IntervalPlayVideo {
+  constructor() {
+    this.child = null;
+    this.previousQuantityVideo = 0;
+    this.currentIndexVideoRunning = 0;
+    this.playlistInterval = null;
+  }
+
+  runPlaylistVideo() {
+    this.playlistInterval = setInterval(() => {
+      this.intervalVideo(pathToStoreVideoConfig);
+    }, 15000);
+  }
+
+  intervalVideo(path) {
+    if (fs.existsSync(path)) {
+      const rawData = fs.readFileSync(path);
+      const videoList = JSON.parse(rawData) || [];
+
+      if (this.previousQuantityVideo === videoList.length) {
+        const videoIdWillPlay = videoList[this.currentIndexVideoRunning]?.ID;
+
+        //-----------------will remove code inside------------------------------
+        console.log("Index video: ", this.currentIndexVideoRunning);
+        //-----------------will remove code inside------------------------------
+
+        this.stopProcess();
+
+        const logVideoById = getLogVideoById(
+          pathToStoreVideoLog,
+          videoIdWillPlay
+        );
+
+        if (logVideoById) {
+          const newLogData = {
+            ...logVideoById,
+            label: {
+              ...logVideoById.label,
+              displayCount: logVideoById?.label?.displayCount + 1,
+            },
+          };
+
+          if (this._updateValueCallback) {
+            this._updateValueCallback(
+              Buffer.from(JSON.stringify(newLogData), "utf-8")
+            );
+          }
+
+          writeLogRunVideo(pathToStoreVideoLog, newLogData);
+        } else {
+          if (this._updateValueCallback) {
+            this._updateValueCallback(
+              Buffer.from(
+                JSON.stringify({
+                  ID: videoIdWillPlay,
+                  label: {
+                    person: 1,
+                    car: 3,
+                    motocycle: 4,
+                    timestamp: 131232132131,
+                    displayCount: logVideoById?.label?.displayCount + 1,
+                  },
+                }),
+                "utf-8"
+              )
+            );
+          }
+
+          writeLogRunVideo(pathToStoreVideoLog, {
+            ID: videoIdWillPlay,
+            label: {
+              person: 1,
+              car: 3,
+              motocycle: 4,
+              timestamp: 131232132131,
+              displayCount: logVideoById?.label?.displayCount + 1,
+            },
+          });
+        }
+
+        this.runCommandLine(videoIdWillPlay);
+
+        if (this.currentIndexVideoRunning === videoList.length - 1) {
+          this.currentIndexVideoRunning = 0;
+        } else {
+          this.currentIndexVideoRunning = this.currentIndexVideoRunning + 1;
+        }
+      } else {
+        // if (this.playlistInterval) {
+        //   console.log("Clear interval");
+        //   this.stopIntervalPlayList();
+        // }
+
+        //-----------------will remove code inside------------------------------
+        console.log("Index video: ", 0);
+        //-----------------will remove code inside------------------------------
+        this.previousQuantityVideo = videoList.length;
+        this.currentIndexVideoRunning = 1;
+        this.stopProcess();
+
+        const logVideoById = getLogVideoById(
+          pathToStoreVideoLog,
+          videoList[0]?.ID
+        );
+
+        if (logVideoById) {
+          if (this._updateValueCallback) {
+            this._updateValueCallback(
+              Buffer.from(
+                JSON.stringify({
+                  ID: videoList[0]?.ID,
+                  label: {
+                    ...logVideoById.label,
+                    displayCount: logVideoById?.label?.displayCount + 1,
+                  },
+                }),
+                "utf-8"
+              )
+            );
+          }
+
+          writeLogRunVideo(pathToStoreVideoLog, {
+            ID: videoList[0]?.ID,
+            label: {
+              ...logVideoById.label,
+              displayCount: logVideoById?.label?.displayCount + 1,
+            },
+          });
+        } else {
+          if (this._updateValueCallback) {
+            this._updateValueCallback(
+              Buffer.from(
+                JSON.stringify({
+                  ID: videoList[0]?.ID,
+                  label: {
+                    person: 1,
+                    car: 3,
+                    motocycle: 4,
+                    timestamp: 131232132131,
+                    displayCount: logVideoById?.label?.displayCount + 1,
+                  },
+                }),
+                "utf-8"
+              )
+            );
+          }
+          writeLogRunVideo(pathToStoreVideoLog, {
+            ID: videoList[0]?.ID,
+            label: {
+              person: 1,
+              car: 3,
+              motocycle: 4,
+              timestamp: 131232132131,
+              displayCount: logVideoById?.label?.displayCount + 1,
+            },
+          });
+        }
+
+        this.runCommandLine(videoList[0]?.ID);
+      }
+    } else {
+      console.log("No config.json file");
+    }
+  }
+
+  stopIntervalPlayList() {
+    if (this.playlistInterval) {
+      clearInterval(this.playlistInterval);
+      this.playlistInterval = null;
+    }
+  }
+
+  runCommandLine(id) {
+    // Terminate any existing process
+    if (this.child) {
+      this.child.kill("SIGTERM");
+    }
+
+    const command = "sudo";
+    const args = [
+      "/home/pi3b/Projects/rpi-rgb-led-matrix/utils/video-viewer",
+      "--led-brightness=80",
+      "--led-show-refresh",
+      "--led-rows=64",
+      "--led-cols=128",
+      "--led-parallel=3",
+      "--led-pwm-dither-bits=1",
+      "-f",
+      "-F",
+      "/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage/" +
+        id +
+        ".mp4",
+      "--led-pwm-bits=10",
+      "--led-pwm-lsb-nanoseconds=350",
+    ];
+
+    // Spawn the process
+    this.child = spawn(command, args);
+
+    // Handle output
+    this.child.stdout.on("data", (data) => {
+      console.log(`stdout: ${data}`);
+    });
+
+    this.child.stderr.on("data", (data) => {
+      console.error(`stderr: ${data}`);
+    });
+
+    this.child.on("close", (code) => {
+      console.log(`child process exited with code ${code}`);
+    });
+  }
+
+  stopProcess() {
+    if (this.child) {
+      this.child.kill("SIGTERM"); // Terminate the process
+      this.child = null; // Reset the reference
+      console.log("Process stopped");
+    }
+  }
+}
+
+const intervalPlayVideo = new IntervalPlayVideo();
+
 class StaticReadOnlyCharacteristic extends BlenoCharacteristic {
   constructor() {
     super({
@@ -99,9 +323,9 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
     this.completeData = Buffer.alloc(0);
     this.child = null;
     this.isReceivedData = false;
-    this.currentIndexVideoRunning = 0;
-    this.previousQuantityVideo = 0;
-    this.playlistInterval = null;
+    // this.currentIndexVideoRunning = 0;
+    // this.previousQuantityVideo = 0;
+    // this.playlistInterval = null;
   }
 
   onWriteRequest(data, offset, withoutResponse, callback) {
@@ -144,13 +368,15 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
 
           this.decodeConvertToFile(completeDataString, videoID);
 
-          this.runPlaylistVideo(pathToStoreVideoConfig);
-          this.playlistInterval = setInterval(
-            function () {
-              this.runPlaylistVideo(pathToStoreVideoConfig);
-            }.bind(this),
-            15000
-          );
+          intervalPlayVideo.runPlaylistVideo(pathToStoreVideoConfig);
+
+          // this.runPlaylistVideo(pathToStoreVideoConfig);
+          // this.playlistInterval = setInterval(
+          //   function () {
+          //     this.runPlaylistVideo(pathToStoreVideoConfig);
+          //   }.bind(this),
+          //   15000
+          // );
 
           callback(this.RESULT_SUCCESS);
         }
@@ -158,14 +384,18 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
     } catch (error) {}
 
     if (data.toString("base64") === "UGxheUxpc3RWaWRlbw==") {
-      this.runPlaylistVideo(pathToStoreVideoConfig);
+      intervalPlayVideo.stopProcess();
+      intervalPlayVideo.intervalVideo(pathToStoreVideoConfig);
+      intervalPlayVideo.runPlaylistVideo();
 
-      this.playlistInterval = setInterval(
-        function () {
-          this.runPlaylistVideo(pathToStoreVideoConfig);
-        }.bind(this),
-        15000
-      );
+      // this.runPlaylistVideo(pathToStoreVideoConfig);
+
+      // this.playlistInterval = setInterval(
+      //   function () {
+      //     this.runPlaylistVideo(pathToStoreVideoConfig);
+      //   }.bind(this),
+      //   15000
+      // );
     }
 
     if (data.toString("base64") === "RGVsZXRlQ29uZmln") {
@@ -270,155 +500,155 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
     }
   }
 
-  runPlaylistVideo(path) {
-    if (fs.existsSync(path)) {
-      const rawData = fs.readFileSync(path);
-      const videoList = JSON.parse(rawData) || [];
+  // runPlaylistVideo(path) {
+  //   if (fs.existsSync(path)) {
+  //     const rawData = fs.readFileSync(path);
+  //     const videoList = JSON.parse(rawData) || [];
 
-      if (this.previousQuantityVideo === videoList.length) {
-        const videoIdWillPlay = videoList[this.currentIndexVideoRunning]?.ID;
+  //     if (this.previousQuantityVideo === videoList.length) {
+  //       const videoIdWillPlay = videoList[this.currentIndexVideoRunning]?.ID;
 
-        //-----------------will remove code inside------------------------------
-        console.log("Index video: ", this.currentIndexVideoRunning);
-        //-----------------will remove code inside------------------------------
+  //       //-----------------will remove code inside------------------------------
+  //       console.log("Index video: ", this.currentIndexVideoRunning);
+  //       //-----------------will remove code inside------------------------------
 
-        this.stopProcess();
+  //       this.stopProcess();
 
-        const logVideoById = getLogVideoById(
-          pathToStoreVideoLog,
-          videoIdWillPlay
-        );
+  //       const logVideoById = getLogVideoById(
+  //         pathToStoreVideoLog,
+  //         videoIdWillPlay
+  //       );
 
-        if (logVideoById) {
-          const newLogData = {
-            ...logVideoById,
-            label: {
-              ...logVideoById.label,
-              displayCount: logVideoById?.label?.displayCount + 1,
-            },
-          };
+  //       if (logVideoById) {
+  //         const newLogData = {
+  //           ...logVideoById,
+  //           label: {
+  //             ...logVideoById.label,
+  //             displayCount: logVideoById?.label?.displayCount + 1,
+  //           },
+  //         };
 
-          if (this._updateValueCallback) {
-            this._updateValueCallback(
-              Buffer.from(JSON.stringify(newLogData), "utf-8")
-            );
-          }
+  //         if (this._updateValueCallback) {
+  //           this._updateValueCallback(
+  //             Buffer.from(JSON.stringify(newLogData), "utf-8")
+  //           );
+  //         }
 
-          writeLogRunVideo(pathToStoreVideoLog, newLogData);
-        } else {
-          if (this._updateValueCallback) {
-            this._updateValueCallback(
-              Buffer.from(
-                JSON.stringify({
-                  ID: videoIdWillPlay,
-                  label: {
-                    person: 1,
-                    car: 3,
-                    motocycle: 4,
-                    timestamp: 131232132131,
-                    displayCount: logVideoById?.label?.displayCount + 1,
-                  },
-                }),
-                "utf-8"
-              )
-            );
-          }
+  //         writeLogRunVideo(pathToStoreVideoLog, newLogData);
+  //       } else {
+  //         if (this._updateValueCallback) {
+  //           this._updateValueCallback(
+  //             Buffer.from(
+  //               JSON.stringify({
+  //                 ID: videoIdWillPlay,
+  //                 label: {
+  //                   person: 1,
+  //                   car: 3,
+  //                   motocycle: 4,
+  //                   timestamp: 131232132131,
+  //                   displayCount: logVideoById?.label?.displayCount + 1,
+  //                 },
+  //               }),
+  //               "utf-8"
+  //             )
+  //           );
+  //         }
 
-          writeLogRunVideo(pathToStoreVideoLog, {
-            ID: videoIdWillPlay,
-            label: {
-              person: 1,
-              car: 3,
-              motocycle: 4,
-              timestamp: 131232132131,
-              displayCount: logVideoById?.label?.displayCount + 1,
-            },
-          });
-        }
+  //         writeLogRunVideo(pathToStoreVideoLog, {
+  //           ID: videoIdWillPlay,
+  //           label: {
+  //             person: 1,
+  //             car: 3,
+  //             motocycle: 4,
+  //             timestamp: 131232132131,
+  //             displayCount: logVideoById?.label?.displayCount + 1,
+  //           },
+  //         });
+  //       }
 
-        this.runCommandLine(videoIdWillPlay);
+  //       this.runCommandLine(videoIdWillPlay);
 
-        if (this.currentIndexVideoRunning === videoList.length - 1) {
-          this.currentIndexVideoRunning = 0;
-        } else {
-          this.currentIndexVideoRunning = this.currentIndexVideoRunning + 1;
-        }
-      } else {
-        if (this.playlistInterval) {
-          console.log("Clear interval");
-          this.stopIntervalPlayList();
-        }
+  //       if (this.currentIndexVideoRunning === videoList.length - 1) {
+  //         this.currentIndexVideoRunning = 0;
+  //       } else {
+  //         this.currentIndexVideoRunning = this.currentIndexVideoRunning + 1;
+  //       }
+  //     } else {
+  //       if (this.playlistInterval) {
+  //         console.log("Clear interval");
+  //         this.stopIntervalPlayList();
+  //       }
 
-        //-----------------will remove code inside------------------------------
-        console.log("Index video: ", 0);
-        //-----------------will remove code inside------------------------------
-        this.previousQuantityVideo = videoList.length;
-        this.currentIndexVideoRunning = 1;
-        this.stopProcess();
+  //       //-----------------will remove code inside------------------------------
+  //       console.log("Index video: ", 0);
+  //       //-----------------will remove code inside------------------------------
+  //       this.previousQuantityVideo = videoList.length;
+  //       this.currentIndexVideoRunning = 1;
+  //       this.stopProcess();
 
-        const logVideoById = getLogVideoById(
-          pathToStoreVideoLog,
-          videoList[0]?.ID
-        );
+  //       const logVideoById = getLogVideoById(
+  //         pathToStoreVideoLog,
+  //         videoList[0]?.ID
+  //       );
 
-        if (logVideoById) {
-          if (this._updateValueCallback) {
-            this._updateValueCallback(
-              Buffer.from(
-                JSON.stringify({
-                  ID: videoList[0]?.ID,
-                  label: {
-                    ...logVideoById.label,
-                    displayCount: logVideoById?.label?.displayCount + 1,
-                  },
-                }),
-                "utf-8"
-              )
-            );
-          }
+  //       if (logVideoById) {
+  //         if (this._updateValueCallback) {
+  //           this._updateValueCallback(
+  //             Buffer.from(
+  //               JSON.stringify({
+  //                 ID: videoList[0]?.ID,
+  //                 label: {
+  //                   ...logVideoById.label,
+  //                   displayCount: logVideoById?.label?.displayCount + 1,
+  //                 },
+  //               }),
+  //               "utf-8"
+  //             )
+  //           );
+  //         }
 
-          writeLogRunVideo(pathToStoreVideoLog, {
-            ID: videoList[0]?.ID,
-            label: {
-              ...logVideoById.label,
-              displayCount: logVideoById?.label?.displayCount + 1,
-            },
-          });
-        } else {
-          if (this._updateValueCallback) {
-            this._updateValueCallback(
-              Buffer.from(
-                JSON.stringify({
-                  ID: videoList[0]?.ID,
-                  label: {
-                    person: 1,
-                    car: 3,
-                    motocycle: 4,
-                    timestamp: 131232132131,
-                    displayCount: logVideoById?.label?.displayCount + 1,
-                  },
-                }),
-                "utf-8"
-              )
-            );
-          }
-          writeLogRunVideo(pathToStoreVideoLog, {
-            ID: videoList[0]?.ID,
-            label: {
-              person: 1,
-              car: 3,
-              motocycle: 4,
-              timestamp: 131232132131,
-              displayCount: logVideoById?.label?.displayCount + 1,
-            },
-          });
-        }
-        this.runCommandLine(videoList[0]?.ID);
-      }
-    } else {
-      console.log("No config.json file");
-    }
-  }
+  //         writeLogRunVideo(pathToStoreVideoLog, {
+  //           ID: videoList[0]?.ID,
+  //           label: {
+  //             ...logVideoById.label,
+  //             displayCount: logVideoById?.label?.displayCount + 1,
+  //           },
+  //         });
+  //       } else {
+  //         if (this._updateValueCallback) {
+  //           this._updateValueCallback(
+  //             Buffer.from(
+  //               JSON.stringify({
+  //                 ID: videoList[0]?.ID,
+  //                 label: {
+  //                   person: 1,
+  //                   car: 3,
+  //                   motocycle: 4,
+  //                   timestamp: 131232132131,
+  //                   displayCount: logVideoById?.label?.displayCount + 1,
+  //                 },
+  //               }),
+  //               "utf-8"
+  //             )
+  //           );
+  //         }
+  //         writeLogRunVideo(pathToStoreVideoLog, {
+  //           ID: videoList[0]?.ID,
+  //           label: {
+  //             person: 1,
+  //             car: 3,
+  //             motocycle: 4,
+  //             timestamp: 131232132131,
+  //             displayCount: logVideoById?.label?.displayCount + 1,
+  //           },
+  //         });
+  //       }
+  //       this.runCommandLine(videoList[0]?.ID);
+  //     }
+  //   } else {
+  //     console.log("No config.json file");
+  //   }
+  // }
 }
 
 module.exports = WriteOnlyCharacteristic;
@@ -522,12 +752,8 @@ bleno.on("stateChange", function (state) {
 
   if (state === "poweredOn") {
     bleno.startAdvertising(hostName, ["fffffffffffffffffffffffffffffff0"]);
-
-    const startMethod = new WriteOnlyCharacteristic();
-    startMethod.runPlaylistVideo(pathToStoreVideoConfig);
-    setInterval(() => {
-      startMethod.runPlaylistVideo(pathToStoreVideoConfig);
-    }, 15000);
+    intervalPlayVideo.intervalVideo(pathToStoreVideoConfig);
+    intervalPlayVideo.runPlaylistVideo();
   } else {
     bleno.stopAdvertising();
   }
