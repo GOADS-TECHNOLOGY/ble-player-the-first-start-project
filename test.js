@@ -142,17 +142,15 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
             }
           }
 
-          // writeDataConfigVideoToJsonFile(pathToStoreVideoConfig, {
-          //   ID: videoID,
-          //   Code: 200,
-          //   Schedule: {
-          //     time_start: 837248327483,
-          //     time_end: 84883478437584,
-          //   },
-          // });
-
           this.decodeConvertToFile(completeDataString, videoID);
+
           this.runPlaylistVideo(pathToStoreVideoConfig);
+          this.playlistInterval = setInterval(
+            function () {
+              this.runPlaylistVideo(pathToStoreVideoConfig);
+            }.bind(this),
+            15000
+          );
 
           callback(this.RESULT_SUCCESS);
         }
@@ -160,7 +158,16 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
     } catch (error) {}
 
     if (data.toString("base64") === "UGxheUxpc3RWaWRlbw==") {
+      console.log("Time receiver run playList", new Date());
+
       this.runPlaylistVideo(pathToStoreVideoConfig);
+
+      this.playlistInterval = setInterval(
+        function () {
+          this.runPlaylistVideo(pathToStoreVideoConfig);
+        }.bind(this),
+        15000
+      );
     }
 
     if (data.toString("base64") === "RGVsZXRlQ29uZmln") {
@@ -175,6 +182,24 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
       }
       callback(this.RESULT_CONTINUE);
     }
+  }
+
+  onReadRequest(offset, callback) {
+    let data = null;
+    // Check file exist
+    if (fs.existsSync(pathToStoreVideoLog)) {
+      // If exit, read data from the file
+      const rawData = fs.readFileSync(pathToStoreVideoLog);
+      data = rawData;
+
+      console.log("Gửi dữ liệu.");
+    }
+    console.log("log data: ", JSON.stringify(data));
+    callback(
+      this.RESULT_SUCCESS,
+      Buffer.from(JSON.stringify(data).toString("utf-8"))
+    );
+    // callback(this.RESULT_SUCCESS, JSON.stringify(data));
   }
 
   decodeConvertToFile(dataString, id) {
@@ -248,127 +273,121 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
   }
 
   runPlaylistVideo(path) {
-    this.playlistInterval = setInterval(
-      function () {
-        if (fs.existsSync(path)) {
-          const rawData = fs.readFileSync(path);
-          const videoList = JSON.parse(rawData) || [];
+    if (fs.existsSync(path)) {
+      const rawData = fs.readFileSync(path);
+      const videoList = JSON.parse(rawData) || [];
 
-          if (this.previousQuantityVideo === videoList.length) {
-            const videoIdWillPlay =
-              videoList[this.currentIndexVideoRunning]?.ID;
+      if (this.previousQuantityVideo === videoList.length) {
+        const videoIdWillPlay = videoList[this.currentIndexVideoRunning]?.ID;
 
-            //-----------------will remove code inside------------------------------
-            console.log("Name video play: ", videoIdWillPlay);
-            console.log("Index video: ", this.currentIndexVideoRunning);
-            //-----------------will remove code inside------------------------------
+        //-----------------will remove code inside------------------------------
+        console.log("Index video: ", this.currentIndexVideoRunning);
+        //-----------------will remove code inside------------------------------
 
-            this.stopProcess();
+        this.stopProcess();
 
-            const logVideoById = getLogVideoById(
-              pathToStoreVideoLog,
-              videoIdWillPlay
+        const logVideoById = getLogVideoById(
+          pathToStoreVideoLog,
+          videoIdWillPlay
+        );
+
+        if (logVideoById) {
+          const newLogData = {
+            ...logVideoById,
+            label: {
+              ...logVideoById.label,
+              displayCount: logVideoById?.label?.displayCount + 1,
+            },
+          };
+
+          if (this._updateValueCallback) {
+            this._updateValueCallback(
+              Buffer.from(JSON.stringify(newLogData), "utf-8")
             );
-
-            if (logVideoById) {
-              const newLogData = {
-                ...logVideoById,
-                label: {
-                  ...logVideoById.label,
-                  displayCount: logVideoById?.label?.displayCount + 1,
-                },
-              };
-
-              if (this._updateValueCallback) {
-                this._updateValueCallback(
-                  Buffer.from(JSON.stringify(newLogData), "utf-8")
-                );
-              }
-
-              writeLogRunVideo(pathToStoreVideoLog, newLogData);
-            } else {
-              if (this._updateValueCallback) {
-                this._updateValueCallback(
-                  Buffer.from(
-                    JSON.stringify({
-                      ID: videoIdWillPlay,
-                      label: {
-                        person: 1,
-                        car: 3,
-                        motocycle: 4,
-                        timestamp: 131232132131,
-                        displayCount: logVideoById?.label?.displayCount + 1,
-                      },
-                    }),
-                    "utf-8"
-                  )
-                );
-              }
-
-              writeLogRunVideo(pathToStoreVideoLog, {
-                ID: videoIdWillPlay,
-                label: {
-                  person: 1,
-                  car: 3,
-                  motocycle: 4,
-                  timestamp: 131232132131,
-                  displayCount: logVideoById?.label?.displayCount + 1,
-                },
-              });
-            }
-
-            this.runCommandLine(videoIdWillPlay);
-
-            if (this.currentIndexVideoRunning === videoList.length - 1) {
-              this.currentIndexVideoRunning = 0;
-            } else {
-              this.currentIndexVideoRunning = this.currentIndexVideoRunning + 1;
-            }
-          } else {
-            if (this.previousQuantityVideo !== 0) {
-              console.log("Clear interval");
-              this.stopIntervalPlayList();
-            }
-
-            console.log("Run Play List Again");
-            this.previousQuantityVideo = videoList.length;
-            this.currentIndexVideoRunning = 1;
-            this.stopProcess();
-
-            const logVideoById = getLogVideoById(
-              pathToStoreVideoLog,
-              videoList[0]?.ID
-            );
-
-            if (logVideoById) {
-              writeLogRunVideo(pathToStoreVideoLog, {
-                ID: videoList[0]?.ID,
-                label: {
-                  ...logVideoById.label,
-                  displayCount: logVideoById?.label?.displayCount + 1,
-                },
-              });
-            } else {
-              writeLogRunVideo(pathToStoreVideoLog, {
-                ID: videoList[0]?.ID,
-                label: {
-                  person: 1,
-                  car: 3,
-                  motocycle: 4,
-                  timestamp: 131232132131,
-                  displayCount: logVideoById?.label?.displayCount + 1,
-                },
-              });
-            }
-
-            this.runCommandLine(videoList[0]?.ID);
           }
+
+          writeLogRunVideo(pathToStoreVideoLog, newLogData);
         } else {
-          console.log("No config.json file");
+          if (this._updateValueCallback) {
+            this._updateValueCallback(
+              Buffer.from(
+                JSON.stringify({
+                  ID: videoIdWillPlay,
+                  label: {
+                    person: 1,
+                    car: 3,
+                    motocycle: 4,
+                    timestamp: 131232132131,
+                    displayCount: logVideoById?.label?.displayCount + 1,
+                  },
+                }),
+                "utf-8"
+              )
+            );
+          }
+
+          writeLogRunVideo(pathToStoreVideoLog, {
+            ID: videoIdWillPlay,
+            label: {
+              person: 1,
+              car: 3,
+              motocycle: 4,
+              timestamp: 131232132131,
+              displayCount: logVideoById?.label?.displayCount + 1,
+            },
+          });
         }
-      }.bind(this),
-      15000
-    );
+
+        this.runCommandLine(videoIdWillPlay);
+
+        if (this.currentIndexVideoRunning === videoList.length - 1) {
+          this.currentIndexVideoRunning = 0;
+        } else {
+          this.currentIndexVideoRunning = this.currentIndexVideoRunning + 1;
+        }
+      } else {
+        if (this.playlistInterval) {
+          console.log("Clear interval");
+          this.stopIntervalPlayList();
+        }
+
+        //-----------------will remove code inside------------------------------
+        console.log("Index video: ", 0);
+        //-----------------will remove code inside------------------------------
+        this.previousQuantityVideo = videoList.length;
+        this.currentIndexVideoRunning = 1;
+        this.stopProcess();
+
+        const logVideoById = getLogVideoById(
+          pathToStoreVideoLog,
+          videoList[0]?.ID
+        );
+
+        if (logVideoById) {
+          writeLogRunVideo(pathToStoreVideoLog, {
+            ID: videoList[0]?.ID,
+            label: {
+              ...logVideoById.label,
+              displayCount: logVideoById?.label?.displayCount + 1,
+            },
+          });
+        } else {
+          writeLogRunVideo(pathToStoreVideoLog, {
+            ID: videoList[0]?.ID,
+            label: {
+              person: 1,
+              car: 3,
+              motocycle: 4,
+              timestamp: 131232132131,
+              displayCount: logVideoById?.label?.displayCount + 1,
+            },
+          });
+        }
+        this.runCommandLine(videoList[0]?.ID);
+      }
+    } else {
+      console.log("No config.json file");
+    }
   }
 }
 
@@ -562,7 +581,6 @@ const writeLogRunVideo = (path, newLog) => {
     } else {
       const newLogData = currentData.map((element) => {
         if (element.ID === newLog.ID) {
-          console.log("log newLog: ", newLog);
           return {
             ...element,
             ...newLog,
@@ -571,8 +589,6 @@ const writeLogRunVideo = (path, newLog) => {
           return element;
         }
       });
-      console.log("log newLogData: ", newLogData);
-
       fs.writeFileSync(path, JSON.stringify(newLogData));
     }
 
