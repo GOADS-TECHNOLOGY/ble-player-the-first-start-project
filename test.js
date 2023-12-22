@@ -158,8 +158,6 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
     } catch (error) {}
 
     if (data.toString("base64") === "UGxheUxpc3RWaWRlbw==") {
-      console.log("Time receiver run playList", new Date());
-
       this.runPlaylistVideo(pathToStoreVideoConfig);
 
       this.playlistInterval = setInterval(
@@ -524,6 +522,12 @@ bleno.on("stateChange", function (state) {
 
   if (state === "poweredOn") {
     bleno.startAdvertising(hostName, ["fffffffffffffffffffffffffffffff0"]);
+
+    const startMethod = new WriteOnlyCharacteristic();
+    startMethod.runPlaylistVideo(pathToStoreVideoConfig);
+    setInterval(() => {
+      startMethod.runPlaylistVideo(pathToStoreVideoConfig);
+    }, 15000);
   } else {
     bleno.stopAdvertising();
   }
