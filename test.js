@@ -76,6 +76,8 @@ class IntervalPlayVideo {
             label: {
               ...logVideoById.label,
               displayCount: logVideoById?.label?.displayCount + 1,
+              viewCount:
+                logVideoById?.label?.viewCount + Math.floor(Math.random() * 30),
             },
           };
 
@@ -98,6 +100,9 @@ class IntervalPlayVideo {
                     motocycle: 4,
                     timestamp: 131232132131,
                     displayCount: logVideoById?.label?.displayCount + 1,
+                    viewCount:
+                      logVideoById?.label?.viewCount +
+                      Math.floor(Math.random() * 30),
                   },
                 }),
                 "utf-8"
@@ -113,6 +118,8 @@ class IntervalPlayVideo {
               motocycle: 4,
               timestamp: 131232132131,
               displayCount: logVideoById?.label?.displayCount + 1,
+              viewCount:
+                logVideoById?.label?.viewCount + Math.floor(Math.random() * 30),
             },
           });
         }
@@ -125,11 +132,6 @@ class IntervalPlayVideo {
           this.currentIndexVideoRunning = this.currentIndexVideoRunning + 1;
         }
       } else {
-        // if (this.playlistInterval) {
-        //   console.log("Clear interval");
-        //   this.stopIntervalPlayList();
-        // }
-
         //-----------------will remove code inside------------------------------
         console.log("Index video: ", 0);
         //-----------------will remove code inside------------------------------
@@ -152,6 +154,9 @@ class IntervalPlayVideo {
                   label: {
                     ...logVideoById.label,
                     displayCount: logVideoById?.label?.displayCount + 1,
+                    viewCount:
+                      logVideoById?.label?.viewCount +
+                      Math.floor(Math.random() * 30),
                   },
                 }),
                 "utf-8"
@@ -164,6 +169,8 @@ class IntervalPlayVideo {
             label: {
               ...logVideoById.label,
               displayCount: logVideoById?.label?.displayCount + 1,
+              viewCount:
+                logVideoById?.label?.viewCount + Math.floor(Math.random() * 30),
             },
           });
         } else {
@@ -178,6 +185,9 @@ class IntervalPlayVideo {
                     motocycle: 4,
                     timestamp: 131232132131,
                     displayCount: logVideoById?.label?.displayCount + 1,
+                    viewCount:
+                      logVideoById?.label?.viewCount +
+                      Math.floor(Math.random() * 30),
                   },
                 }),
                 "utf-8"
@@ -192,6 +202,8 @@ class IntervalPlayVideo {
               motocycle: 4,
               timestamp: 131232132131,
               displayCount: logVideoById?.label?.displayCount + 1,
+              viewCount:
+                logVideoById?.label?.viewCount + Math.floor(Math.random() * 30),
             },
           });
         }
