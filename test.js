@@ -18,6 +18,12 @@ const pathToStoreVideoLog =
 const pathToStoreVideo =
   "/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage";
 
+recordLogEntry(
+  "INFO",
+  "SYSTEM",
+  "---------------------NEW CYCLE--------------------"
+);
+
 recordLogEntry("INFO", "BLE", "GoAds BLE Starting");
 
 class IntervalPlayVideo {
@@ -355,9 +361,6 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
     this.completeData = Buffer.alloc(0);
     this.child = null;
     this.isReceivedData = false;
-    // this.currentIndexVideoRunning = 0;
-    // this.previousQuantityVideo = 0;
-    // this.playlistInterval = null;
   }
 
   onWriteRequest(data, offset, withoutResponse, callback) {
@@ -376,11 +379,11 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
         if (!checkIdVideoExistInConfig(videoID, pathToStoreVideoConfig)) {
           const completeDataString = this.completeData.toString("base64");
 
-          recordLogEntry(
-            "INFO",
-            "Received Package Successfully",
-            "Complete data received: " + completeDataString
-          );
+          // recordLogEntry(
+          //   "INFO",
+          //   "Received Package Successfully",
+          //   "Complete data received: " + completeDataString
+          // );
 
           this.completeData = Buffer.alloc(0);
           this.writeCount = 0;
@@ -568,13 +571,12 @@ class SampleService extends BlenoPrimaryService {
 bleno.on("stateChange", function (state) {
   recordLogEntry(
     "INFO",
-    "ble",
+    "BLE",
     "on -> stateChange: " + state + ", address = " + bleno.address
   );
 
   if (state === "poweredOn") {
     bleno.startAdvertising(hostName, ["fffffffffffffffffffffffffffffff0"]);
-    // intervalPlayVideo.intervalVideo(pathToStoreVideoConfig);
     intervalPlayVideo.runPlaylistVideo();
   } else {
     bleno.stopAdvertising();
@@ -583,28 +585,28 @@ bleno.on("stateChange", function (state) {
 
 // Linux only events /////////////////
 bleno.on("accept", function (clientAddress) {
-  recordLogEntry("INFO", "ble", "on -> accept, client: " + clientAddress);
+  recordLogEntry("INFO", "BLE", "on -> accept, client: " + clientAddress);
 
   bleno.updateRssi();
 });
 
 bleno.on("disconnect", function (clientAddress) {
-  recordLogEntry("INFO", "ble", "on -> disconnect, client: " + clientAddress);
+  recordLogEntry("INFO", "BLE", "on -> disconnect, client: " + clientAddress);
 });
 
 bleno.on("rssiUpdate", function (rssi) {
-  recordLogEntry("INFO", "ble", "on -> rssiUpdate: " + rssi);
+  recordLogEntry("INFO", "BLE", "on -> rssiUpdate: " + rssi);
 });
 //////////////////////////////////////
 
 bleno.on("mtuChange", function (mtu) {
-  recordLogEntry("INFO", "ble", "on -> mtuChange: " + mtu);
+  recordLogEntry("INFO", "BLE", "on -> mtuChange: " + mtu);
 });
 
 bleno.on("advertisingStart", function (error) {
   recordLogEntry(
     "INFO",
-    "ble",
+    "BLE",
     "on -> advertisingStart: " + (error ? "error " + error : "success")
   );
 
@@ -614,13 +616,13 @@ bleno.on("advertisingStart", function (error) {
 });
 
 bleno.on("advertisingStop", function () {
-  recordLogEntry("INFO", "ble", "on -> advertisingStop");
+  recordLogEntry("INFO", "BLE", "on -> advertisingStop");
 });
 
 bleno.on("servicesSet", function (error) {
   recordLogEntry(
     "INFO",
-    "ble",
+    "BLE",
     "on -> servicesSet: " + (error ? "error " + error : "success")
   );
 });

@@ -29,13 +29,13 @@ function recordLogEntry(status, service, logMessage) {
     }
 
     // Append the log entry to the log file
-    // fs.appendFile(logFilePath, logEntry, (appendErr) => {
-    //   if (appendErr) {
-    //     console.error("Error writing to log file:", appendErr);
-    //   } else {
-    //     console.log("Log entry recorded to file:", logEntry);
-    //   }
-    // });
+    fs.appendFile(logFilePath, logEntry, (appendErr) => {
+      //   if (appendErr) {
+      //     console.error("Error writing to log file:", appendErr);
+      //   } else {
+      //     console.log("Log entry recorded to file:", logEntry);
+      //   }
+    });
   });
 }
 
