@@ -1,3 +1,5 @@
+const recordLogEntry = require("./log.js");
+
 const bleno = require("./index");
 // import os module
 const os = require("os");
@@ -16,11 +18,7 @@ const pathToStoreVideoLog =
 const pathToStoreVideo =
   "/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage";
 
-console.log("==================");
-console.log("GoAds BLE Starting");
-console.log("==================");
-
-console.log(bleno.PrimaryService);
+recordLogEntry("INFO", "BLE", "GoAds BLE Starting");
 
 class IntervalPlayVideo {
   constructor() {
@@ -58,9 +56,11 @@ class IntervalPlayVideo {
       if (this.previousQuantityVideo === videoList.length) {
         const videoIdWillPlay = videoList[this.currentIndexVideoRunning]?.ID;
 
-        //-----------------will remove code inside------------------------------
-        console.log("Index video: ", this.currentIndexVideoRunning);
-        //-----------------will remove code inside------------------------------
+        recordLogEntry(
+          "INFO",
+          "Play Video",
+          `Index video: ${this.currentIndexVideoRunning}`
+        );
 
         this.stopProcess();
         // this.clearPlaylistVideo();
@@ -132,9 +132,8 @@ class IntervalPlayVideo {
           this.currentIndexVideoRunning = this.currentIndexVideoRunning + 1;
         }
       } else {
-        //-----------------will remove code inside------------------------------
-        console.log("Index video: ", 0);
-        //-----------------will remove code inside------------------------------
+        recordLogEntry("INFO", "Play Video", `Index video: 0`);
+
         this.previousQuantityVideo = videoList.length;
         this.currentIndexVideoRunning = 1;
         // this.stopProcess();
@@ -211,7 +210,7 @@ class IntervalPlayVideo {
         this.runCommandLine(videoList[0]?.ID);
       }
     } else {
-      console.log("No config.json file");
+      recordLogEntry("WARNING", "Write config file", `No config.json file`);
     }
   }
 
@@ -267,7 +266,7 @@ class IntervalPlayVideo {
     if (this.child) {
       this.child.kill("SIGTERM"); // Terminate the process
       this.child = null; // Reset the reference
-      console.log("Process stopped");
+      recordLogEntry("INFO", "Play Video", `Process stopped`);
     }
   }
 
@@ -364,10 +363,6 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
   onWriteRequest(data, offset, withoutResponse, callback) {
     this.isReceivedData = false;
 
-    console.log(
-      "WriteOnlyCharacteristic write request: " + data.toString("utf-8")
-    );
-    console.log("Write dataBase64: " + data.toString("base64"));
     console.log("Write request count: " + ++this.writeCount);
 
     this.completeData = Buffer.concat([this.completeData, data]);
@@ -376,15 +371,17 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
       const convertObj = JSON.parse(String(data.toString("utf-8")));
 
       if (convertObj?.Code === 200) {
-        console.log("log convertObj: ", convertObj);
-
-        // const videoID = `goads00${Math.floor(Math.random() * 10) + 1}`;
-
         const videoID = convertObj?.ID;
 
         if (!checkIdVideoExistInConfig(videoID, pathToStoreVideoConfig)) {
           const completeDataString = this.completeData.toString("base64");
-          console.log("Complete data received: " + completeDataString);
+
+          recordLogEntry(
+            "INFO",
+            "Received Package Successfully",
+            "Complete data received: " + completeDataString
+          );
+
           this.completeData = Buffer.alloc(0);
           this.writeCount = 0;
 
@@ -459,7 +456,12 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
     } else {
       const bufferData = Buffer.from(dataString, "base64");
       fs.writeFileSync(`${pathToStoreVideo}/${id}.mp4`, bufferData, "binary");
-      console.log("File MP4 has been successfully created.");
+
+      recordLogEntry(
+        "INFO",
+        "decodeConvertToFile",
+        `${id}-File MP4 has been successfully created`
+      );
     }
   }
 
@@ -487,7 +489,6 @@ class NotifyOnlyCharacteristic extends BlenoCharacteristic {
         const data = Buffer.alloc(4);
         data.writeUInt32LE(this.counter, 0);
 
-        console.log("NotifyOnlyCharacteristic update value: " + this.counter);
         updateValueCallback(data);
         this.counter++;
       }.bind(this),
@@ -565,7 +566,11 @@ class SampleService extends BlenoPrimaryService {
 }
 
 bleno.on("stateChange", function (state) {
-  console.log("on -> stateChange: " + state + ", address = " + bleno.address);
+  recordLogEntry(
+    "INFO",
+    "ble",
+    "on -> stateChange: " + state + ", address = " + bleno.address
+  );
 
   if (state === "poweredOn") {
     bleno.startAdvertising(hostName, ["fffffffffffffffffffffffffffffff0"]);
@@ -578,26 +583,28 @@ bleno.on("stateChange", function (state) {
 
 // Linux only events /////////////////
 bleno.on("accept", function (clientAddress) {
-  console.log("on -> accept, client: " + clientAddress);
+  recordLogEntry("INFO", "ble", "on -> accept, client: " + clientAddress);
 
   bleno.updateRssi();
 });
 
 bleno.on("disconnect", function (clientAddress) {
-  console.log("on -> disconnect, client: " + clientAddress);
+  recordLogEntry("INFO", "ble", "on -> disconnect, client: " + clientAddress);
 });
 
 bleno.on("rssiUpdate", function (rssi) {
-  console.log("on -> rssiUpdate: " + rssi);
+  recordLogEntry("INFO", "ble", "on -> rssiUpdate: " + rssi);
 });
 //////////////////////////////////////
 
 bleno.on("mtuChange", function (mtu) {
-  console.log("on -> mtuChange: " + mtu);
+  recordLogEntry("INFO", "ble", "on -> mtuChange: " + mtu);
 });
 
 bleno.on("advertisingStart", function (error) {
-  console.log(
+  recordLogEntry(
+    "INFO",
+    "ble",
     "on -> advertisingStart: " + (error ? "error " + error : "success")
   );
 
@@ -607,11 +614,15 @@ bleno.on("advertisingStart", function (error) {
 });
 
 bleno.on("advertisingStop", function () {
-  console.log("on -> advertisingStop");
+  recordLogEntry("INFO", "ble", "on -> advertisingStop");
 });
 
 bleno.on("servicesSet", function (error) {
-  console.log("on -> servicesSet: " + (error ? "error " + error : "success"));
+  recordLogEntry(
+    "INFO",
+    "ble",
+    "on -> servicesSet: " + (error ? "error " + error : "success")
+  );
 });
 
 const writeDataConfigVideoToJsonFile = (path, data) => {
@@ -630,18 +641,25 @@ const writeDataConfigVideoToJsonFile = (path, data) => {
       const newData = [...currentData, data];
       // Update new data to the file
       fs.writeFileSync(path, JSON.stringify(newData));
-      console.log("Dữ liệu đã được cập nhật vào file.");
+      recordLogEntry(
+        "INFO",
+        "writeDataConfigVideoToJsonFile",
+        "Dữ liệu đã được cập nhật vào file."
+      );
     }
   } else {
     // If file is not exist, create and add data to it
     fs.writeFileSync(path, JSON.stringify([data]));
-    console.log("File mới đã được tạo và dữ liệu đã được thêm vào.");
+
+    recordLogEntry(
+      "INFO",
+      "writeDataConfigVideoToJsonFile",
+      "File mới đã được tạo và dữ liệu đã được thêm vào"
+    );
   }
 };
 
 const writeLogRunVideo = (path, newLog) => {
-  console.log("Write Video Log.");
-
   // Check file exist
   if (fs.existsSync(path)) {
     // If exit, read data from the file
@@ -671,11 +689,20 @@ const writeLogRunVideo = (path, newLog) => {
       fs.writeFileSync(path, JSON.stringify(newLogData));
     }
 
-    console.log("File log đã được cập nhật vào file.");
+    recordLogEntry(
+      "INFO",
+      "writeDataConfigVideoToJsonFile",
+      "File log đã được cập nhật"
+    );
   } else {
     // If file is not exist, create and add data to it
     fs.writeFileSync(path, JSON.stringify([newLog]));
-    console.log("File log mới đã được tạo và thêm dữ liệu.");
+
+    recordLogEntry(
+      "INFO",
+      "writeDataConfigVideoToJsonFile",
+      "File log mới đã được tạo và thêm dữ liệu"
+    );
   }
 };
 
@@ -718,6 +745,10 @@ const DeleteFile = (path) => {
   if (fs.existsSync(path)) {
     // Delete file
     fs.unlinkSync(path);
-    console.log("Dữ liệu đã được xóa khỏi file.");
+    recordLogEntry(
+      "INFO",
+      "writeDataConfigVideoToJsonFile",
+      "Dữ liệu đã được xóa khỏi file."
+    );
   }
 };
