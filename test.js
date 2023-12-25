@@ -1,6 +1,9 @@
 const recordLogEntry = require("./log.js");
 
 const bleno = require("./index");
+
+const cron = require("node-cron");
+
 // import os module
 const os = require("os");
 // get host name
@@ -52,6 +55,18 @@ class IntervalPlayVideo {
     this.playlistInterval = setInterval(() => {
       this.playVideo(pathToStoreVideoConfig);
     }, 15000);
+  }
+
+  runDefaultVideo() {
+    if (fs.existsSync(pathToStoreVideo)) {
+      recordLogEntry("INFO", "Play Default Video", "Run default value");
+
+      // this.stopProcess();
+      this.clearPlaylistVideo();
+      this.runCommandLine("default");
+    } else {
+      recordLogEntry("WARNING", "Play Default Video", `No default file`);
+    }
   }
 
   playVideo(path) {
@@ -283,6 +298,41 @@ class IntervalPlayVideo {
 }
 
 const intervalPlayVideo = new IntervalPlayVideo();
+
+// // Define your task to be executed every minute
+// const minuteJob = () => {
+//   const currentTime = new Date().toLocaleTimeString();
+//   console.log(`This job runs every minute! Current time: ${currentTime}`);
+//   intervalPlayVideo.runDefaultVideo();
+
+//   // Record the start time
+//   const startTime = new Date().getTime();
+
+//   // Your code inside setTimeout
+//   setTimeout(() => {
+//     // // Record the end time
+//     // const endTime = new Date().getTime();
+
+//     // // Calculate the time elapsed
+//     // const elapsedTime = endTime - startTime;
+
+//     // console.log(`Time taken: ${elapsedTime} milliseconds`);
+//     console.log(`Stop video and enable previous video`);
+//     recordLogEntry("INFO", "Play Default Video", "Clear Defaul Video Job");
+
+//     intervalPlayVideo.clearPlaylistVideo();
+//     recordLogEntry("INFO", "Play Default Video", "Continue Playlist");
+
+//     intervalPlayVideo.runPlaylistVideo();
+
+//     // Your code here
+//   }, 2 * 60 * 1000); // 1000 milliseconds (1 second) delay in this example
+
+//   // Add your job logic here
+// };
+
+// // Schedule the job to run every minute
+// cron.schedule("0 * * * *", minuteJob);
 
 class StaticReadOnlyCharacteristic extends BlenoCharacteristic {
   constructor() {
