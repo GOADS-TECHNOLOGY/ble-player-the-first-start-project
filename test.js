@@ -80,7 +80,7 @@ class IntervalPlayVideo {
         recordLogEntry(
           "INFO",
           "Play Video",
-          `Index video: ${this.currentIndexVideoRunning}`
+          `Index video: ${this.currentIndexVideoRunning} - ID: ${videoIdWillPlay}`
         );
 
         this.stopProcess();
@@ -153,7 +153,11 @@ class IntervalPlayVideo {
           this.currentIndexVideoRunning = this.currentIndexVideoRunning + 1;
         }
       } else {
-        recordLogEntry("INFO", "Play Video", `Index video: 0`);
+        recordLogEntry(
+          "INFO",
+          "Play Video",
+          `Index video: 0 - ID: ${videoList[0]?.ID}`
+        );
 
         this.previousQuantityVideo = videoList.length;
         this.currentIndexVideoRunning = 1;
@@ -300,7 +304,7 @@ class IntervalPlayVideo {
 const intervalPlayVideo = new IntervalPlayVideo();
 
 // // Define your task to be executed every minute
-// const minuteJob = () => {
+// const hourJob = () => {
 //   const currentTime = new Date().toLocaleTimeString();
 //   console.log(`This job runs every minute! Current time: ${currentTime}`);
 //   intervalPlayVideo.runDefaultVideo();
@@ -332,7 +336,7 @@ const intervalPlayVideo = new IntervalPlayVideo();
 // };
 
 // // Schedule the job to run every minute
-// cron.schedule("0 * * * *", minuteJob);
+// cron.schedule("0 * * * *", hourJob);
 
 class StaticReadOnlyCharacteristic extends BlenoCharacteristic {
   constructor() {
@@ -413,17 +417,19 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
     this.isReceivedData = false;
   }
 
-  onWriteRequest(data, offset, withoutResponse, callback) {
+  async onWriteRequest(data, offset, withoutResponse, callback) {
     this.isReceivedData = false;
-
-    console.log("Write request count: " + ++this.writeCount);
-
-    this.completeData = Buffer.concat([this.completeData, data]);
+    // console.log("Write request count: " + ++this.writeCount);
 
     try {
       const convertObj = JSON.parse(String(data.toString("utf-8")));
 
-      if (convertObj?.Code === 200) {
+      if (Number(convertObj?.Code) === 100) {
+        this.completeData = Buffer.alloc(0);
+        this.writeCount = 0;
+      }
+
+      if (Number(convertObj?.Code) === 200) {
         const videoID = convertObj?.ID;
 
         if (!checkIdVideoExistInConfig(videoID, pathToStoreVideoConfig)) {
@@ -435,10 +441,9 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
           //   "Complete data received: " + completeDataString
           // );
 
-          this.completeData = Buffer.alloc(0);
-          this.writeCount = 0;
-
           writeDataConfigVideoToJsonFile(pathToStoreVideoConfig, convertObj);
+
+          this.decodeConvertToFile(completeDataString, videoID);
 
           if (this._updateValueCallback) {
             if (this.isReceivedData) {
@@ -451,7 +456,8 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
             intervalPlayVideo.setSendNotify(this._updateValueCallback);
           }
 
-          this.decodeConvertToFile(completeDataString, videoID);
+          this.completeData = Buffer.alloc(0);
+          this.writeCount = 0;
 
           intervalPlayVideo.setIndexPlayVideo(0);
           intervalPlayVideo.clearPlaylistVideo();
@@ -460,8 +466,14 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
           callback(this.RESULT_SUCCESS);
         }
       }
-    } catch (error) {}
+    } catch (error) {
+      this.completeData = Buffer.concat([this.completeData, data]);
+      if (this._updateValueCallback) {
+        this._updateValueCallback(Buffer.from(`${null}`, "utf-8"));
+      }
+    }
 
+    // PlayListVideo
     if (data.toString("base64") === "UGxheUxpc3RWaWRlbw==") {
       if (this._updateValueCallback) {
         intervalPlayVideo.setSendNotify(this._updateValueCallback);
@@ -471,18 +483,16 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
       intervalPlayVideo.runPlaylistVideo();
     }
 
+    // DeleteConfig
     if (data.toString("base64") === "RGVsZXRlQ29uZmln") {
       DeleteFile(pathToStoreVideoConfig);
       if (this._updateValueCallback) {
         this._updateValueCallback(Buffer.from(`${null}`, "utf-8"));
       }
       callback(this.RESULT_CONTINUE);
-    } else {
-      if (this._updateValueCallback) {
-        this._updateValueCallback(Buffer.from(`${null}`, "utf-8"));
-      }
-      callback(this.RESULT_CONTINUE);
     }
+
+    callback(this.RESULT_CONTINUE);
   }
 
   onReadRequest(offset, callback) {
@@ -508,6 +518,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
       fs.mkdirSync(pathToStoreVideo, { recursive: true });
     } else {
       const bufferData = Buffer.from(dataString, "base64");
+
       fs.writeFileSync(`${pathToStoreVideo}/${id}.mp4`, bufferData, "binary");
 
       recordLogEntry(
@@ -515,6 +526,12 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
         "decodeConvertToFile",
         `${id}-File MP4 has been successfully created`
       );
+
+      console.log("log send continue data");
+
+      if (this._updateValueCallback) {
+        this._updateValueCallback(Buffer.from(`${100}`, "utf-8"));
+      }
     }
   }
 
