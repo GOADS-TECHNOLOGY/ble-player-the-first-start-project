@@ -247,7 +247,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
         id +
         ".mp4",
       "--led-pwm-bits=9",
-      "--led-pwm-lsb-nanoseconds=300",
+      "--led-pwm-lsb-nanoseconds=320",
     ];
 
     // Spawn the process
