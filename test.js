@@ -230,6 +230,7 @@ class IntervalPlayVideo {
         ".mp4",
       "--led-pwm-bits=10",
       "--led-pwm-lsb-nanoseconds=350",
+      "--led-no-hardware-pulse",
     ];
 
     // Spawn the process
