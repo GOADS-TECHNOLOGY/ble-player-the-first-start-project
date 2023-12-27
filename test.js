@@ -73,166 +73,128 @@ class IntervalPlayVideo {
     if (fs.existsSync(path)) {
       const rawData = fs.readFileSync(path);
       const videoList = JSON.parse(rawData) || [];
-
-      if (this.previousQuantityVideo === videoList.length) {
-        const videoIdWillPlay = videoList[this.currentIndexVideoRunning]?.ID;
-
-        recordLogEntry(
-          "INFO",
-          "Play Video",
-          `Index video: ${this.currentIndexVideoRunning} - ID: ${videoIdWillPlay}`
-        );
-
-        this.stopProcess();
-        // this.clearPlaylistVideo();
-
-        const logVideoById = getLogVideoById(
-          pathToStoreVideoLog,
-          videoIdWillPlay
-        );
-
-        if (logVideoById) {
-          const newLogData = {
-            ...logVideoById,
-            label: {
-              ...logVideoById.label,
-              displayCount: logVideoById?.label?.displayCount + 1,
-              viewCount:
-                logVideoById?.label?.viewCount + Math.floor(Math.random() * 30),
-            },
-          };
-
-          if (this._updateValueCallback) {
-            this._updateValueCallback(
-              Buffer.from(JSON.stringify(newLogData), "utf-8")
-            );
+      if (videoList.length > 0) {
+        if (this.previousQuantityVideo === videoList.length) {
+          if (this.currentIndexVideoRunning >= videoList.length - 1) {
+            this.currentIndexVideoRunning = 0;
           }
 
-          writeLogRunVideo(pathToStoreVideoLog, newLogData);
-        } else {
-          if (this._updateValueCallback) {
-            this._updateValueCallback(
-              Buffer.from(
-                JSON.stringify({
-                  ID: videoIdWillPlay,
-                  label: {
-                    person: 1,
-                    car: 3,
-                    motocycle: 4,
-                    timestamp: 131232132131,
-                    displayCount: logVideoById?.label?.displayCount + 1,
-                    viewCount:
-                      logVideoById?.label?.viewCount +
-                      Math.floor(Math.random() * 30),
-                  },
-                }),
-                "utf-8"
-              )
-            );
+          const videoIdWillPlay = videoList[this.currentIndexVideoRunning]?.ID;
+
+          recordLogEntry(
+            "INFO",
+            "Play Video",
+            `Index video: ${this.currentIndexVideoRunning} - ID: ${videoIdWillPlay}`
+          );
+
+          this.stopProcess();
+          // this.clearPlaylistVideo();
+
+          const logVideoById = getLogVideoById(
+            pathToStoreVideoLog,
+            videoIdWillPlay
+          );
+
+          if (logVideoById) {
+            const playVideoWithLog = {
+              ...logVideoById,
+              label: {
+                ...logVideoById.label,
+                displayCount: Number(logVideoById?.label?.displayCount) + 1,
+                viewCount:
+                  Number(logVideoById?.label?.viewCount) +
+                  Math.floor(Math.random() * 30),
+              },
+            };
+
+            if (this._updateValueCallback) {
+              this._updateValueCallback(
+                Buffer.from(JSON.stringify(playVideoWithLog), "utf-8")
+              );
+            }
+
+            writeLogRunVideo(pathToStoreVideoLog, playVideoWithLog);
+          } else {
+            const playVideoWithoutLog = {
+              ID: videoIdWillPlay,
+              label: {
+                person: 1,
+                car: 3,
+                motocycle: 4,
+                timestamp: 131232132131,
+                displayCount: 1,
+                viewCount: Math.floor(Math.random() * 30),
+              },
+            };
+
+            if (this._updateValueCallback) {
+              this._updateValueCallback(
+                Buffer.from(JSON.stringify(playVideoWithoutLog), "utf-8")
+              );
+            }
+
+            writeLogRunVideo(pathToStoreVideoLog, playVideoWithoutLog);
           }
 
-          writeLogRunVideo(pathToStoreVideoLog, {
-            ID: videoIdWillPlay,
-            label: {
-              person: 1,
-              car: 3,
-              motocycle: 4,
-              timestamp: 131232132131,
-              displayCount: logVideoById?.label?.displayCount + 1,
-              viewCount:
-                logVideoById?.label?.viewCount + Math.floor(Math.random() * 30),
-            },
-          });
-        }
-
-        this.runCommandLine(videoIdWillPlay);
-
-        if (this.currentIndexVideoRunning === videoList.length - 1) {
-          this.currentIndexVideoRunning = 0;
-        } else {
+          this.runCommandLine(videoIdWillPlay);
           this.currentIndexVideoRunning = this.currentIndexVideoRunning + 1;
-        }
-      } else {
-        recordLogEntry(
-          "INFO",
-          "Play Video",
-          `Index video: 0 - ID: ${videoList[0]?.ID}`
-        );
-
-        this.previousQuantityVideo = videoList.length;
-        this.currentIndexVideoRunning = 1;
-        // this.stopProcess();
-        this.clearPlaylistVideo();
-
-        const logVideoById = getLogVideoById(
-          pathToStoreVideoLog,
-          videoList[0]?.ID
-        );
-
-        if (logVideoById) {
-          if (this._updateValueCallback) {
-            this._updateValueCallback(
-              Buffer.from(
-                JSON.stringify({
-                  ID: videoList[0]?.ID,
-                  label: {
-                    ...logVideoById.label,
-                    displayCount: logVideoById?.label?.displayCount + 1,
-                    viewCount:
-                      logVideoById?.label?.viewCount +
-                      Math.floor(Math.random() * 30),
-                  },
-                }),
-                "utf-8"
-              )
-            );
-          }
-
-          writeLogRunVideo(pathToStoreVideoLog, {
-            ID: videoList[0]?.ID,
-            label: {
-              ...logVideoById.label,
-              displayCount: logVideoById?.label?.displayCount + 1,
-              viewCount:
-                logVideoById?.label?.viewCount + Math.floor(Math.random() * 30),
-            },
-          });
         } else {
-          if (this._updateValueCallback) {
-            this._updateValueCallback(
-              Buffer.from(
-                JSON.stringify({
-                  ID: videoList[0]?.ID,
-                  label: {
-                    person: 1,
-                    car: 3,
-                    motocycle: 4,
-                    timestamp: 131232132131,
-                    displayCount: logVideoById?.label?.displayCount + 1,
-                    viewCount:
-                      logVideoById?.label?.viewCount +
-                      Math.floor(Math.random() * 30),
-                  },
-                }),
-                "utf-8"
-              )
-            );
-          }
-          writeLogRunVideo(pathToStoreVideoLog, {
-            ID: videoList[0]?.ID,
-            label: {
-              person: 1,
-              car: 3,
-              motocycle: 4,
-              timestamp: 131232132131,
-              displayCount: logVideoById?.label?.displayCount + 1,
-              viewCount:
-                logVideoById?.label?.viewCount + Math.floor(Math.random() * 30),
-            },
-          });
-        }
+          recordLogEntry(
+            "INFO",
+            "Play Video",
+            `Index video: 0 - ID: ${videoList[0]?.ID}`
+          );
 
-        this.runCommandLine(videoList[0]?.ID);
+          this.previousQuantityVideo = videoList.length;
+          this.currentIndexVideoRunning = 1;
+          // this.stopProcess();
+          this.clearPlaylistVideo();
+
+          const logVideoById = getLogVideoById(
+            pathToStoreVideoLog,
+            videoList[0]?.ID
+          );
+
+          if (logVideoById) {
+            const playFirstVideoWithLog = {
+              ID: videoList[0]?.ID,
+              label: {
+                ...logVideoById.label,
+                displayCount: Number(logVideoById?.label?.displayCount) + 1,
+                viewCount:
+                  Number(logVideoById?.label?.viewCount) +
+                  Math.floor(Math.random() * 30),
+              },
+            };
+            if (this._updateValueCallback) {
+              this._updateValueCallback(
+                Buffer.from(JSON.stringify(playFirstVideoWithLog), "utf-8")
+              );
+            }
+
+            writeLogRunVideo(pathToStoreVideoLog, playFirstVideoWithLog);
+          } else {
+            const playFirstVideoWithOutLog = {
+              ID: videoList[0]?.ID,
+              label: {
+                person: 1,
+                car: 3,
+                motocycle: 4,
+                timestamp: 131232132131,
+                displayCount: 1,
+                viewCount: Math.floor(Math.random() * 30),
+              },
+            };
+            if (this._updateValueCallback) {
+              this._updateValueCallback(
+                Buffer.from(JSON.stringify(playFirstVideoWithOutLog), "utf-8")
+              );
+            }
+            writeLogRunVideo(pathToStoreVideoLog, playFirstVideoWithOutLog);
+          }
+
+          this.runCommandLine(videoList[0]?.ID);
+        }
       }
     } else {
       recordLogEntry("WARNING", "Write config file", `No config.json file`);
@@ -267,7 +229,7 @@ class IntervalPlayVideo {
         id +
         ".mp4",
       "--led-pwm-bits=10",
-      "--led-pwm-lsb-nanoseconds=320",
+      "--led-pwm-lsb-nanoseconds=350",
     ];
 
     // Spawn the process
@@ -415,6 +377,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
     this.completeData = Buffer.alloc(0);
     this.child = null;
     this.isReceivedData = false;
+    this._updateValueCallback = null;
   }
 
   async onWriteRequest(data, offset, withoutResponse, callback) {
@@ -452,8 +415,6 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
               this._updateValueCallback(Buffer.from(`${200}`, "utf-8"));
               this.isReceivedData = true;
             }
-
-            intervalPlayVideo.setSendNotify(this._updateValueCallback);
           }
 
           this.completeData = Buffer.alloc(0);
@@ -475,9 +436,6 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
 
     // PlayListVideo
     if (data.toString("base64") === "UGxheUxpc3RWaWRlbw==") {
-      if (this._updateValueCallback) {
-        intervalPlayVideo.setSendNotify(this._updateValueCallback);
-      }
       intervalPlayVideo.setIndexPlayVideo(0);
       intervalPlayVideo.clearPlaylistVideo();
       intervalPlayVideo.runPlaylistVideo();
@@ -537,6 +495,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
 
   onSubscribe(maxValueSize, updateValueCallback) {
     this._updateValueCallback = updateValueCallback;
+    intervalPlayVideo.setSendNotify(updateValueCallback);
   }
 }
 
