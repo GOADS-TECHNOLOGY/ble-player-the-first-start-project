@@ -75,7 +75,7 @@ class IntervalPlayVideo {
       const videoList = JSON.parse(rawData) || [];
       if (videoList.length > 0) {
         if (this.previousQuantityVideo === videoList.length) {
-          if (this.currentIndexVideoRunning >= videoList.length - 1) {
+          if (this.currentIndexVideoRunning > videoList.length - 1) {
             this.currentIndexVideoRunning = 0;
           }
 
