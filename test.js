@@ -371,7 +371,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
   constructor() {
     super({
       uuid: "fffffffffffffffffffffffffffffff4",
-      properties: ["write", "notify"],
+      properties: ["write", "notify", "read"],
       // properties: ["writeWithoutResponse", "notify"],
     });
     this.writeCount = 0;
@@ -457,18 +457,12 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
   onReadRequest(offset, callback) {
     let data = null;
     // Check file exist
-    if (fs.existsSync(pathToStoreVideoLog)) {
+    if (fs.existsSync(pathToStoreVideoConfig)) {
       // If exit, read data from the file
-      const rawData = fs.readFileSync(pathToStoreVideoLog);
-      data = rawData;
-
-      console.log("Gửi dữ liệu.");
+      const rawData = fs.readFileSync(pathToStoreVideoConfig);
+      data = JSON.parse(rawData);
     }
-    console.log("log data: ", JSON.stringify(data));
-    callback(
-      this.RESULT_SUCCESS,
-      Buffer.from(JSON.stringify(data).toString("utf-8"))
-    );
+    callback(this.RESULT_SUCCESS, Buffer.from(JSON.stringify(data), "utf-8"));
     // callback(this.RESULT_SUCCESS, JSON.stringify(data));
   }
 
