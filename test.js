@@ -136,7 +136,16 @@ class IntervalPlayVideo {
             writeLogRunVideo(pathToStoreVideoLog, playVideoWithoutLog);
           }
 
-          this.runCommandLine(videoIdWillPlay);
+          try {
+            this.runCommandLine(videoIdWillPlay);
+          } catch (err) {
+            if (this._updateValueCallback) {
+              this._updateValueCallback(
+                Buffer.from(`Play video error: ${videoIdWillPlay}`, "utf-8")
+              );
+            }
+          }
+
           this.currentIndexVideoRunning = this.currentIndexVideoRunning + 1;
         } else {
           recordLogEntry(
