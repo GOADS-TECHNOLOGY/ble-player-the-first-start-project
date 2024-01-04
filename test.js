@@ -437,6 +437,15 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
           callback(this.RESULT_SUCCESS);
         }
       }
+
+      if (convertObj?.action === "delete") {
+        DeleteVideoById(pathToStoreVideo, convertObj?.ID);
+        if (this._updateValueCallback) {
+          this._updateValueCallback(
+            Buffer.from(`Delete Successfully`, "utf-8")
+          );
+        }
+      }
     } catch (error) {
       this.completeData = Buffer.concat([this.completeData, data]);
       if (this._updateValueCallback) {
@@ -781,6 +790,37 @@ const DeleteFile = (path) => {
       "INFO",
       "writeDataConfigVideoToJsonFile",
       "Dữ liệu đã được xóa khỏi file."
+    );
+  }
+};
+
+const DeleteVideoById = (path, id) => {
+  const pathToVideo = `${path}/${id}.mp4`;
+  // Check file exist
+  if (fs.existsSync(pathToVideo)) {
+    // Delete file
+    fs.unlinkSync(pathToVideo);
+    recordLogEntry("INFO", "DeleteVideoById", "Video đã được xóa.");
+  }
+
+  if (fs.existsSync(pathToStoreVideoConfig)) {
+    // If exit, read data from the file
+    const rawData = fs.readFileSync(pathToStoreVideoConfig);
+    const configVideoData = JSON.parse(rawData);
+    const newConfigVideoData = configVideoData.filter(
+      (video) => video.ID !== id
+    );
+
+    // Write new data to the file
+    fs.writeFileSync(
+      pathToStoreVideoConfig,
+      JSON.stringify(newConfigVideoData)
+    );
+
+    recordLogEntry(
+      "INFO",
+      "UpdateConfigVideoFile",
+      "Danh sách cấu hình video đã được cập nhật."
     );
   }
 };
