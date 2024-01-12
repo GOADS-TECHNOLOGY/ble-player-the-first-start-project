@@ -439,11 +439,32 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
       }
 
       if (convertObj?.action === "delete") {
-        DeleteVideoById(pathToStoreVideo, convertObj?.ID);
-        if (this._updateValueCallback) {
-          this._updateValueCallback(
-            Buffer.from(`Delete Successfully`, "utf-8")
-          );
+        try {
+          DeleteVideoById(pathToStoreVideo, convertObj?.ID);
+          if (this._updateValueCallback) {
+            this._updateValueCallback(
+              Buffer.from(
+                JSON.stringify({
+                  status: 200,
+                  message: "Delete video successfuly",
+                }),
+                "utf-8"
+              )
+            );
+          }
+        } catch (err) {
+          if (this._updateValueCallback) {
+            this._updateValueCallback(
+              Buffer.from(
+                JSON.stringify({
+                  status: 404,
+                  message: "Delete video failed",
+                  error: err,
+                }),
+                "utf-8"
+              )
+            );
+          }
         }
       }
     } catch (error) {
