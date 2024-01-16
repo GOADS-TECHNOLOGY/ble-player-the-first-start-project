@@ -111,6 +111,11 @@ class IntervalPlayVideo {
               this._updateValueCallback(
                 Buffer.from(JSON.stringify(playVideoWithLog), "utf-8")
               );
+              recordLogEntry(
+                "INFO",
+                "sendDataTracking",
+                JSON.stringify(playVideoWithLog)
+              );
             }
 
             writeLogRunVideo(pathToStoreVideoLog, playVideoWithLog);
@@ -131,6 +136,11 @@ class IntervalPlayVideo {
               this._updateValueCallback(
                 Buffer.from(JSON.stringify(playVideoWithoutLog), "utf-8")
               );
+              recordLogEntry(
+                "INFO",
+                "sendDataTracking",
+                JSON.stringify(playVideoWithoutLog)
+              );
             }
 
             writeLogRunVideo(pathToStoreVideoLog, playVideoWithoutLog);
@@ -142,6 +152,11 @@ class IntervalPlayVideo {
             if (this._updateValueCallback) {
               this._updateValueCallback(
                 Buffer.from(`Play video error: ${videoIdWillPlay}`, "utf-8")
+              );
+              recordLogEntry(
+                "INFO",
+                "playVideo",
+                `Play video error: ${videoIdWillPlay}`
               );
             }
           }
@@ -179,6 +194,11 @@ class IntervalPlayVideo {
               this._updateValueCallback(
                 Buffer.from(JSON.stringify(playFirstVideoWithLog), "utf-8")
               );
+              recordLogEntry(
+                "INFO",
+                "sendDataTracking",
+                JSON.stringify(playFirstVideoWithLog)
+              );
             }
 
             writeLogRunVideo(pathToStoreVideoLog, playFirstVideoWithLog);
@@ -197,6 +217,11 @@ class IntervalPlayVideo {
             if (this._updateValueCallback) {
               this._updateValueCallback(
                 Buffer.from(JSON.stringify(playFirstVideoWithOutLog), "utf-8")
+              );
+              recordLogEntry(
+                "INFO",
+                "sendDataTracking",
+                JSON.stringify(playFirstVideoWithOutLog)
               );
             }
             writeLogRunVideo(pathToStoreVideoLog, playFirstVideoWithOutLog);
@@ -423,6 +448,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
               this.isReceivedData = false;
             } else {
               this._updateValueCallback(Buffer.from(`${200}`, "utf-8"));
+              recordLogEntry("INFO", "BLE", "Received video");
               this.isReceivedData = true;
             }
           }
@@ -451,6 +477,11 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
                 "utf-8"
               )
             );
+            recordLogEntry(
+              "INFO",
+              "BLE",
+              `"Delete video successfuly: ${convertObj?.ID}`
+            );
           }
         } catch (err) {
           if (this._updateValueCallback) {
@@ -463,6 +494,11 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
                 }),
                 "utf-8"
               )
+            );
+            recordLogEntry(
+              "INFO",
+              "BLE",
+              `"Delete video failed: ${convertObj?.ID}`
             );
           }
         }
@@ -518,8 +554,6 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
         "decodeConvertToFile",
         `${id}-File MP4 has been successfully created`
       );
-
-      console.log("log send continue data");
 
       if (this._updateValueCallback) {
         this._updateValueCallback(Buffer.from(`${100}`, "utf-8"));
