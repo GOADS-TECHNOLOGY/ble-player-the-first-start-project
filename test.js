@@ -471,7 +471,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
               Buffer.from(
                 JSON.stringify({
                   status: 200,
-                  message: "Delete video successfuly",
+                  message: "Delete video successfully",
                 }),
                 "utf-8"
               )
@@ -479,7 +479,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
             recordLogEntry(
               "INFO",
               "BLE",
-              `"Delete video successfuly: ${convertObj?.ID}`
+              `Delete video successfully: ${convertObj?.ID}`
             );
           }
         } catch (err) {
@@ -497,7 +497,47 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
             recordLogEntry(
               "INFO",
               "BLE",
-              `"Delete video failed: ${convertObj?.ID}`
+              `Delete video failed: ${convertObj?.ID}`
+            );
+          }
+        }
+      }
+
+      if (convertObj?.action === "setTimeZone") {
+        try {
+          setSystemTime(convertObj?.timestamp);
+          if (this._updateValueCallback) {
+            this._updateValueCallback(
+              Buffer.from(
+                JSON.stringify({
+                  status: 200,
+                  message: "Set time zone successfully",
+                }),
+                "utf-8"
+              )
+            );
+          }
+          recordLogEntry(
+            "INFO",
+            "BLE",
+            `Set time successfully: ${convertObj?.timestamp}`
+          );
+        } catch (err) {
+          if (this._updateValueCallback) {
+            this._updateValueCallback(
+              Buffer.from(
+                JSON.stringify({
+                  status: 404,
+                  message: "Set time zone failed",
+                  error: err,
+                }),
+                "utf-8"
+              )
+            );
+            recordLogEntry(
+              "INFO",
+              "BLE",
+              `Set time zone failed: ${convertObj?.timestamp}`
             );
           }
         }
@@ -876,5 +916,18 @@ const DeleteVideoById = (path, id) => {
       "UpdateConfigVideoFile",
       "Danh sách cấu hình video đã được cập nhật."
     );
+  }
+};
+
+const setSystemTime = (time) => {
+  const command = "sudo";
+  // sudo timedatectl set-timezone Asia/Ho_Chi_Minh ; sudo date +%s -s "@1705635324"
+
+  // Spawn the process
+
+  if (time) {
+    spawn(command, ["timedatectl", "set-ntp", "0"]);
+    spawn(command, ["timedatectl", "set-timezone", "Asia/Ho_Chi_Minh"]);
+    spawn(command, ["date", "+%s", "-s", `@${time}`]);
   }
 };
