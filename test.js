@@ -1,4 +1,5 @@
 const recordLogEntry = require("./log.js");
+const { spawn, exec } = require("child_process");
 
 const bleno = require("./index");
 
@@ -12,7 +13,6 @@ const hostName = os.hostname();
 const BlenoPrimaryService = bleno.PrimaryService;
 const BlenoCharacteristic = bleno.Characteristic;
 const BlenoDescriptor = bleno.Descriptor;
-const { spawn } = require("child_process");
 const fs = require("fs");
 const pathToStoreVideoConfig =
   "/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage/config.json";
@@ -334,6 +334,33 @@ const intervalPlayVideo = new IntervalPlayVideo();
 // // Schedule the job to run every minute
 // cron.schedule("0 * * * *", hourJob);
 
+let scheduledTurnOffRasperryJob = null;
+let lastKnownTime = new Date().toLocaleTimeString();
+let intervalCheckCurrentTimeId = null;
+// Define your task to be executed every day at 10:00 PM
+const turnOffAt10PM = () => {
+  const currentTime = new Date().toLocaleTimeString();
+  recordLogEntry(
+    "INFO",
+    "SYSTEM-TURN-OFF",
+    `This raspberry turn offs every day at 10:00 PM! Current time: ${currentTime}`
+  );
+
+  // spawn("sudo", ["shutdown ", "-h", "now"]);
+  // Execute the shutdown command
+  exec("sudo shutdown -h now", (error, stdout, stderr) => {
+    if (error) {
+      recordLogEntry("ERROR", "SYSTEM-TURN-OFF", `Error: ${error.message}`);
+      return;
+    }
+  });
+
+  // Add your job logic here
+};
+
+// Schedule the job to run every day at 10:00 PM
+// scheduledTurnOffRasperryJob = cron.schedule("0 22 * * *", turnOffAt10PM);
+
 class StaticReadOnlyCharacteristic extends BlenoCharacteristic {
   constructor() {
     super({
@@ -506,6 +533,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
       if (convertObj?.action === "setTimeZone") {
         try {
           setSystemTime(convertObj?.timestamp);
+
           if (this._updateValueCallback) {
             this._updateValueCallback(
               Buffer.from(
@@ -522,6 +550,8 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
             "BLE",
             `Set time successfully: ${convertObj?.timestamp}`
           );
+          // clear previous job and start new job with new time
+          handleTurnOffSystemAfterUpdateTime();
         } catch (err) {
           if (this._updateValueCallback) {
             this._updateValueCallback(
@@ -537,7 +567,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
             recordLogEntry(
               "INFO",
               "BLE",
-              `Set time zone failed: ${convertObj?.timestamp}`
+              `Set time zone failed: ${err}-${convertObj?.timestamp}`
             );
           }
         }
@@ -919,15 +949,85 @@ const DeleteVideoById = (path, id) => {
   }
 };
 
-const setSystemTime = (time) => {
+const setSystemTime = async (time) => {
   const command = "sudo";
-  // sudo timedatectl set-timezone Asia/Ho_Chi_Minh ; sudo date +%s -s "@1705635324"
-
   // Spawn the process
 
   if (time) {
-    spawn(command, ["timedatectl", "set-ntp", "0"]);
-    spawn(command, ["timedatectl", "set-timezone", "Asia/Ho_Chi_Minh"]);
-    spawn(command, ["date", "+%s", "-s", `@${time}`]);
+    await runCommand(command, ["timedatectl", "set-ntp", "0"]);
+    await runCommand(command, [
+      "timedatectl",
+      "set-timezone",
+      "Asia/Ho_Chi_Minh",
+    ]);
+
+    await runCommand(command, ["date", "+%s", "-s", `@${time}`]);
   }
+};
+
+function runCommand(command, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args);
+
+    child.stdout.on("data", (data) => {
+      console.log(`stdout: ${data}`);
+    });
+
+    child.stderr.on("data", (data) => {
+      console.error(`stderr: ${data}`);
+    });
+
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`Command exited with code ${code}`));
+      }
+    });
+  });
+}
+
+const handleTurnOffSystemAfterUpdateTime = () => {
+  // Check for time changes every minute
+  intervalCheckCurrentTimeId = setInterval(() => {
+    const currentHour = new Date().getHours();
+    const currentTime = new Date().toLocaleTimeString();
+
+    if (currentTime !== lastKnownTime) {
+      // Time has changed, destroy the existing job and reschedule it at 10:00 PM
+      lastKnownTime = currentTime;
+
+      // stop previous run new job
+      if (scheduledTurnOffRasperryJob) {
+        scheduledTurnOffRasperryJob.stop();
+
+        scheduledTurnOffRasperryJob = cron.schedule(
+          "0 22 * * *",
+          turnOffAt10PM
+        );
+        recordLogEntry(
+          "INFO",
+          "SYSTEM-TURN-OFF",
+          `Run turn off job again at: ${currentTime}`
+        );
+        clearInterval(intervalCheckCurrentTimeId);
+      }
+    }
+
+    // // Check if the current time is between 10:00 PM and 6:00 AM
+    // if (currentHour >= 22 || currentHour < 6) {
+    //   recordLogEntry(
+    //     "INFO",
+    //     "SYSTEM-TURN-OFF",
+    //     `Current time is between 10:00 PM and 6:00 AM - Turn off job again at: ${currentTime}`
+    //   );
+
+    //   exec("sudo shutdown -h now", (error, stdout, stderr) => {
+    //     if (error) {
+    //       recordLogEntry("ERROR", "SYSTEM-TURN-OFF", `Error: ${error.message}`);
+    //       return;
+    //     }
+    //   });
+    // }
+  }, 5000); // Check every 5 second for time changes
 };
