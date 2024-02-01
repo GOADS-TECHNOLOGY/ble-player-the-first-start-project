@@ -9,10 +9,20 @@ const cron = require("node-cron");
 const os = require("os");
 // get host name
 const hostName = os.hostname();
+const networkInterfaces = os.networkInterfaces();
+let macAddress = null;
+if (networkInterfaces.hasOwnProperty("eth0")) {
+  macAddress = networkInterfaces["eth0"][0].mac;
+} else if (networkInterfaces.hasOwnProperty("wlan0")) {
+  macAddress = networkInterfaces["wlan0"][0].mac;
+} else {
+  macAddress = fffffffffffffffffffffffffffffff0;
+}
 
 const BlenoPrimaryService = bleno.PrimaryService;
 const BlenoCharacteristic = bleno.Characteristic;
 const BlenoDescriptor = bleno.Descriptor;
+
 const fs = require("fs");
 const pathToStoreVideoConfig =
   "/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage/config.json";
@@ -20,6 +30,8 @@ const pathToStoreVideoLog =
   "/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage/logVideo.json";
 const pathToStoreVideo =
   "/home/pi3b/Projects/rpi-rgb-led-matrix/testing/testVideoImage";
+
+const videoDurationTime = 15000;
 
 recordLogEntry(
   "INFO",
@@ -46,16 +58,60 @@ class IntervalPlayVideo {
     this.currentIndexVideoRunning = index;
   }
 
-  runPlaylistVideo() {
-    this.playVideo(pathToStoreVideoConfig);
-    this.runIntervalVideo();
+  sendLogDataPlayVideoDisconnected() {
+    const logDataOffline = readLogRunVideoOffline(pathToStoreVideoLog);
+
+    if (this._updateValueCallback) {
+      this._updateValueCallback(
+        Buffer.from(JSON.stringify(logDataOffline), "utf-8")
+      );
+
+      recordLogEntry(
+        "INFO",
+        "runPlaylistVideoConnected",
+        `Send log data play video when disconnected`
+      );
+
+      // DeleteFile(pathToStoreVideoLog);
+
+      recordLogEntry(
+        "INFO",
+        "runPlaylistVideoConnected",
+        `Delete log data play video when disconnected after send to app`
+      );
+    }
   }
 
-  runIntervalVideo() {
+  // runPlaylistVideo() {
+  //   this.playVideo(pathToStoreVideoConfig);
+  //   this.runIntervalVideo();
+  // }
+
+  runPlaylistVideoConnected() {
+    this.clearPlaylistVideo();
+
+    this.playVideoConnected(pathToStoreVideoConfig);
+
     this.playlistInterval = setInterval(() => {
-      this.playVideo(pathToStoreVideoConfig);
-    }, 15000);
+      this.playVideoConnected(pathToStoreVideoConfig);
+    }, videoDurationTime);
   }
+
+  runPlaylistVideoDisconnected() {
+    this.clearPlaylistVideo();
+
+    this.playVideoDisconnected(pathToStoreVideoConfig);
+
+    this.playlistInterval = setInterval(() => {
+      this.playVideoDisconnected(pathToStoreVideoConfig);
+    }, videoDurationTime);
+  }
+
+  // runIntervalVideo() {
+  //   this.playlistInterval = setInterval(() => {
+  //     this.playVideo(pathToStoreVideoConfig);
+  //   }, videoDurationTime);
+  // }
 
   runDefaultVideo() {
     if (fs.existsSync(pathToStoreVideo)) {
@@ -69,84 +125,262 @@ class IntervalPlayVideo {
     }
   }
 
-  playVideo(path) {
+  // playVideo(path) {
+  //   if (fs.existsSync(path)) {
+  //     const rawData = fs.readFileSync(path);
+  //     const videoList = JSON.parse(rawData) || [];
+  //     if (videoList.length > 0) {
+  //       if (this.previousQuantityVideo === videoList.length) {
+  //         if (this.currentIndexVideoRunning > videoList.length - 1) {
+  //           this.currentIndexVideoRunning = 0;
+  //         }
+
+  //         const videoIdWillPlay = videoList[this.currentIndexVideoRunning]?.ID;
+
+  //         recordLogEntry(
+  //           "INFO",
+  //           "Play Video",
+  //           `Index video: ${this.currentIndexVideoRunning} - ID: ${videoIdWillPlay}`
+  //         );
+
+  //         this.stopProcess();
+  //         // this.clearPlaylistVideo();
+
+  //         const logVideoById = getLogVideoById(
+  //           pathToStoreVideoLog,
+  //           videoIdWillPlay
+  //         );
+
+  //         if (logVideoById) {
+  //           const playVideoWithLog = {
+  //             ...logVideoById,
+  //             label: {
+  //               ...logVideoById.label,
+  //               displayCount: Number(logVideoById?.label?.displayCount) + 1,
+  //               viewCount:
+  //                 Number(logVideoById?.label?.viewCount) +
+  //                 Math.floor(Math.random() * 30),
+  //             },
+  //           };
+
+  //           if (this._updateValueCallback) {
+  //             this._updateValueCallback(
+  //               Buffer.from(JSON.stringify(playVideoWithLog), "utf-8")
+  //             );
+  //             recordLogEntry(
+  //               "INFO",
+  //               "sendDataTracking",
+  //               JSON.stringify(playVideoWithLog)
+  //             );
+  //           }
+
+  //           writeLogRunVideoOffline(pathToStoreVideoLog, playVideoWithLog);
+  //         } else {
+  //           const playVideoWithoutLog = {
+  //             ID: videoIdWillPlay,
+  //             label: {
+  //               person: 1,
+  //               car: 3,
+  //               motocycle: 4,
+  //               timestamp: 131232132131,
+  //               displayCount: 1,
+  //               viewCount: Math.floor(Math.random() * 30),
+  //             },
+  //           };
+
+  //           if (this._updateValueCallback) {
+  //             this._updateValueCallback(
+  //               Buffer.from(JSON.stringify(playVideoWithoutLog), "utf-8")
+  //             );
+  //             recordLogEntry(
+  //               "INFO",
+  //               "sendDataTracking",
+  //               JSON.stringify(playVideoWithoutLog)
+  //             );
+  //           }
+
+  //           writeLogRunVideoOffline(pathToStoreVideoLog, playVideoWithoutLog);
+  //         }
+
+  //         try {
+  //           this.runCommandLine(videoIdWillPlay);
+  //         } catch (err) {
+  //           if (this._updateValueCallback) {
+  //             this._updateValueCallback(
+  //               Buffer.from(`Play video error: ${videoIdWillPlay}`, "utf-8")
+  //             );
+  //             recordLogEntry(
+  //               "INFO",
+  //               "playVideo",
+  //               `Play video error: ${videoIdWillPlay}`
+  //             );
+  //           }
+  //         }
+
+  //         this.currentIndexVideoRunning = this.currentIndexVideoRunning + 1;
+  //       } else {
+  //         recordLogEntry(
+  //           "INFO",
+  //           "Play Video",
+  //           `Index video: 0 - ID: ${videoList[0]?.ID}`
+  //         );
+
+  //         this.previousQuantityVideo = videoList.length;
+  //         this.currentIndexVideoRunning = 1;
+  //         // this.stopProcess();
+  //         this.clearPlaylistVideo();
+
+  //         const logVideoById = getLogVideoById(
+  //           pathToStoreVideoLog,
+  //           videoList[0]?.ID
+  //         );
+
+  //         if (logVideoById) {
+  //           const playFirstVideoWithLog = {
+  //             ID: videoList[0]?.ID,
+  //             label: {
+  //               ...logVideoById.label,
+  //               displayCount: Number(logVideoById?.label?.displayCount) + 1,
+  //               viewCount:
+  //                 Number(logVideoById?.label?.viewCount) +
+  //                 Math.floor(Math.random() * 30),
+  //             },
+  //           };
+  //           if (this._updateValueCallback) {
+  //             this._updateValueCallback(
+  //               Buffer.from(JSON.stringify(playFirstVideoWithLog), "utf-8")
+  //             );
+  //             recordLogEntry(
+  //               "INFO",
+  //               "sendDataTracking",
+  //               JSON.stringify(playFirstVideoWithLog)
+  //             );
+  //           }
+
+  //           writeLogRunVideoOffline(pathToStoreVideoLog, playFirstVideoWithLog);
+  //         } else {
+  //           const playFirstVideoWithOutLog = {
+  //             ID: videoList[0]?.ID,
+  //             label: {
+  //               person: 1,
+  //               car: 3,
+  //               motocycle: 4,
+  //               timestamp: 131232132131,
+  //               displayCount: 1,
+  //               viewCount: Math.floor(Math.random() * 30),
+  //             },
+  //           };
+  //           if (this._updateValueCallback) {
+  //             this._updateValueCallback(
+  //               Buffer.from(JSON.stringify(playFirstVideoWithOutLog), "utf-8")
+  //             );
+  //             recordLogEntry(
+  //               "INFO",
+  //               "sendDataTracking",
+  //               JSON.stringify(playFirstVideoWithOutLog)
+  //             );
+  //           }
+  //           writeLogRunVideoOffline(
+  //             pathToStoreVideoLog,
+  //             playFirstVideoWithOutLog
+  //           );
+  //         }
+
+  //         this.runCommandLine(videoList[0]?.ID);
+  //       }
+  //     }
+  //   } else {
+  //     recordLogEntry("WARNING", "Write config file", `No config.json file`);
+  //   }
+  // }
+
+  playVideoConnected(path) {
     if (fs.existsSync(path)) {
-      const rawData = fs.readFileSync(path);
-      const videoList = JSON.parse(rawData) || [];
+      const rawListVideoData = fs.readFileSync(path);
+      const videoList = JSON.parse(rawListVideoData) || [];
       if (videoList.length > 0) {
         if (this.previousQuantityVideo === videoList.length) {
           if (this.currentIndexVideoRunning > videoList.length - 1) {
             this.currentIndexVideoRunning = 0;
           }
 
-          const videoIdWillPlay = videoList[this.currentIndexVideoRunning]?.ID;
-
-          recordLogEntry(
-            "INFO",
-            "Play Video",
-            `Index video: ${this.currentIndexVideoRunning} - ID: ${videoIdWillPlay}`
-          );
-
           this.stopProcess();
-          // this.clearPlaylistVideo();
 
-          const logVideoById = getLogVideoById(
-            pathToStoreVideoLog,
-            videoIdWillPlay
-          );
-
-          if (logVideoById) {
-            const playVideoWithLog = {
-              ...logVideoById,
-              label: {
-                ...logVideoById.label,
-                displayCount: Number(logVideoById?.label?.displayCount) + 1,
-                viewCount:
-                  Number(logVideoById?.label?.viewCount) +
-                  Math.floor(Math.random() * 30),
-              },
-            };
-
-            if (this._updateValueCallback) {
-              this._updateValueCallback(
-                Buffer.from(JSON.stringify(playVideoWithLog), "utf-8")
-              );
-              recordLogEntry(
-                "INFO",
-                "sendDataTracking",
-                JSON.stringify(playVideoWithLog)
-              );
-            }
-
-            writeLogRunVideo(pathToStoreVideoLog, playVideoWithLog);
+          let previousIdVideo = null;
+          if (this.currentIndexVideoRunning > 0) {
+            previousIdVideo = videoList[this.currentIndexVideoRunning - 1]?.ID;
           } else {
-            const playVideoWithoutLog = {
-              ID: videoIdWillPlay,
-              label: {
-                person: 1,
-                car: 3,
-                motocycle: 4,
-                timestamp: 131232132131,
-                displayCount: 1,
-                viewCount: Math.floor(Math.random() * 30),
-              },
-            };
-
-            if (this._updateValueCallback) {
-              this._updateValueCallback(
-                Buffer.from(JSON.stringify(playVideoWithoutLog), "utf-8")
-              );
-              recordLogEntry(
-                "INFO",
-                "sendDataTracking",
-                JSON.stringify(playVideoWithoutLog)
-              );
-            }
-
-            writeLogRunVideo(pathToStoreVideoLog, playVideoWithoutLog);
+            previousIdVideo = videoList[videoList.length - 1]?.ID;
           }
 
+          // current data colleted
+          let dataPlayVideoCollected = {
+            ID: previousIdVideo, // previous video
+            label: {
+              person: 1,
+              car: 3,
+              motocycle: 4,
+              timestamp: 131232132131,
+              displayCount: 1,
+              viewCount: Math.floor(Math.random() * 30),
+            },
+          };
+
+          const logVideoDisconnectedById = getLogVideoById(
+            pathToStoreVideoLog,
+            previousIdVideo
+          );
+
+          if (logVideoDisconnectedById) {
+            // update data play video when disconnected incase has log by id
+            dataPlayVideoCollected = {
+              ...logVideoDisconnectedById,
+              label: {
+                ...logVideoDisconnectedById.label,
+                displayCount:
+                  Number(logVideoDisconnectedById?.label?.displayCount) + 1,
+                viewCount:
+                  Number(logVideoDisconnectedById?.label?.viewCount) +
+                  Number(dataPlayVideoCollected?.label?.viewCount),
+              },
+            };
+          }
+
+          if (this._updateValueCallback) {
+            this._updateValueCallback(
+              Buffer.from(JSON.stringify(dataPlayVideoCollected), "utf-8")
+            );
+
+            recordLogEntry(
+              "INFO",
+              "sendDataTracking",
+              JSON.stringify(dataPlayVideoCollected)
+            );
+
+            if (logVideoDisconnectedById) {
+              DeleteLogVideoById(pathToStoreVideoLog, previousIdVideo);
+            }
+          } else {
+            if (logVideoDisconnectedById) {
+              writeLogRunVideoOffline(
+                pathToStoreVideoLog,
+                dataPlayVideoCollected
+              );
+            }
+          }
+
+          // this.clearPlaylistVideo()
+
           try {
+            const videoIdWillPlay =
+              videoList[this.currentIndexVideoRunning]?.ID;
+
+            recordLogEntry(
+              "INFO",
+              "playVideoConnected",
+              `Index video: ${this.currentIndexVideoRunning} - ID: ${videoIdWillPlay}`
+            );
+
             this.runCommandLine(videoIdWillPlay);
           } catch (err) {
             if (this._updateValueCallback) {
@@ -155,7 +389,7 @@ class IntervalPlayVideo {
               );
               recordLogEntry(
                 "INFO",
-                "playVideo",
+                "playVideoConnected",
                 `Play video error: ${videoIdWillPlay}`
               );
             }
@@ -163,48 +397,66 @@ class IntervalPlayVideo {
 
           this.currentIndexVideoRunning = this.currentIndexVideoRunning + 1;
         } else {
+          this.clearPlaylistVideo();
+
           recordLogEntry(
             "INFO",
-            "Play Video",
+            "playVideoConnected",
             `Index video: 0 - ID: ${videoList[0]?.ID}`
           );
 
+          this.runCommandLine(videoList[0]?.ID);
+
           this.previousQuantityVideo = videoList.length;
           this.currentIndexVideoRunning = 1;
-          // this.stopProcess();
-          this.clearPlaylistVideo();
+        }
+      }
+    } else {
+      recordLogEntry("WARNING", "playVideoConnected", `No config.json file`);
+    }
+  }
 
-          const logVideoById = getLogVideoById(
+  playVideoDisconnected(path) {
+    if (fs.existsSync(path)) {
+      const rawListVideoData = fs.readFileSync(path);
+      const videoList = JSON.parse(rawListVideoData) || [];
+      if (videoList.length > 0) {
+        if (this.previousQuantityVideo === videoList.length) {
+          if (this.currentIndexVideoRunning > videoList.length - 1) {
+            this.currentIndexVideoRunning = 0;
+          }
+
+          this.stopProcess();
+
+          let previousIdVideo = null;
+          if (this.currentIndexVideoRunning > 0) {
+            previousIdVideo = videoList[this.currentIndexVideoRunning - 1]?.ID;
+          } else {
+            previousIdVideo = videoList[videoList.length - 1]?.ID;
+          }
+
+          const logPreviousVideoById = getLogVideoById(
             pathToStoreVideoLog,
-            videoList[0]?.ID
+            previousIdVideo
           );
 
-          if (logVideoById) {
-            const playFirstVideoWithLog = {
-              ID: videoList[0]?.ID,
+          if (logPreviousVideoById) {
+            const playVideoWithLog = {
+              ...logPreviousVideoById,
               label: {
-                ...logVideoById.label,
-                displayCount: Number(logVideoById?.label?.displayCount) + 1,
+                ...logPreviousVideoById.label,
+                displayCount:
+                  Number(logPreviousVideoById?.label?.displayCount) + 1,
                 viewCount:
-                  Number(logVideoById?.label?.viewCount) +
+                  Number(logPreviousVideoById?.label?.viewCount) +
                   Math.floor(Math.random() * 30),
               },
             };
-            if (this._updateValueCallback) {
-              this._updateValueCallback(
-                Buffer.from(JSON.stringify(playFirstVideoWithLog), "utf-8")
-              );
-              recordLogEntry(
-                "INFO",
-                "sendDataTracking",
-                JSON.stringify(playFirstVideoWithLog)
-              );
-            }
 
-            writeLogRunVideo(pathToStoreVideoLog, playFirstVideoWithLog);
+            writeLogRunVideoOffline(pathToStoreVideoLog, playVideoWithLog);
           } else {
-            const playFirstVideoWithOutLog = {
-              ID: videoList[0]?.ID,
+            const playVideoWithoutLog = {
+              ID: previousIdVideo,
               label: {
                 person: 1,
                 car: 3,
@@ -214,24 +466,51 @@ class IntervalPlayVideo {
                 viewCount: Math.floor(Math.random() * 30),
               },
             };
+
+            writeLogRunVideoOffline(pathToStoreVideoLog, playVideoWithoutLog);
+          }
+
+          try {
+            const videoIdWillPlay =
+              videoList[this.currentIndexVideoRunning]?.ID;
+
+            recordLogEntry(
+              "INFO",
+              "playVideoDisconnected",
+              `Index video: ${this.currentIndexVideoRunning} - ID: ${videoIdWillPlay}`
+            );
+            this.runCommandLine(videoIdWillPlay);
+          } catch (err) {
             if (this._updateValueCallback) {
               this._updateValueCallback(
-                Buffer.from(JSON.stringify(playFirstVideoWithOutLog), "utf-8")
+                Buffer.from(`Play video error: ${videoIdWillPlay}`, "utf-8")
               );
               recordLogEntry(
                 "INFO",
-                "sendDataTracking",
-                JSON.stringify(playFirstVideoWithOutLog)
+                "playVideoDisconnected",
+                `Play video error: ${videoIdWillPlay}`
               );
             }
-            writeLogRunVideo(pathToStoreVideoLog, playFirstVideoWithOutLog);
           }
 
+          this.currentIndexVideoRunning = this.currentIndexVideoRunning + 1;
+        } else {
+          this.clearPlaylistVideo();
+
+          recordLogEntry(
+            "INFO",
+            "playVideoDisconnected",
+            `Index video: 0 - ID: ${videoList[0]?.ID}`
+          );
+
           this.runCommandLine(videoList[0]?.ID);
+
+          this.previousQuantityVideo = videoList.length;
+          this.currentIndexVideoRunning = 1;
         }
       }
     } else {
-      recordLogEntry("WARNING", "Write config file", `No config.json file`);
+      recordLogEntry("WARNING", "playVideoDisconnected", `No config.json file`);
     }
   }
 
@@ -287,7 +566,7 @@ class IntervalPlayVideo {
     if (this.child) {
       this.child.kill("SIGTERM"); // Terminate the process
       this.child = null; // Reset the reference
-      recordLogEntry("INFO", "Play Video", `Process stopped`);
+      recordLogEntry("INFO", "stopProcess", `Process stopped`);
     }
   }
 
@@ -633,6 +912,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
   onSubscribe(maxValueSize, updateValueCallback) {
     this._updateValueCallback = updateValueCallback;
     intervalPlayVideo.setSendNotify(updateValueCallback);
+    // intervalPlayVideo.sendLogDataPlayVideoDisconnected();
   }
 }
 
@@ -718,7 +998,7 @@ class IndicateOnlyCharacteristic extends BlenoCharacteristic {
 class SampleService extends BlenoPrimaryService {
   constructor() {
     super({
-      uuid: "fffffffffffffffffffffffffffffff0",
+      uuid: macAddress,
       characteristics: [
         new StaticReadOnlyCharacteristic(),
         new DynamicReadOnlyCharacteristic(),
@@ -739,8 +1019,8 @@ bleno.on("stateChange", function (state) {
   );
 
   if (state === "poweredOn") {
-    bleno.startAdvertising(hostName, ["fffffffffffffffffffffffffffffff0"]);
-    intervalPlayVideo.runPlaylistVideo();
+    bleno.startAdvertising(hostName, [macAddress]);
+    intervalPlayVideo.runPlaylistVideoDisconnected();
   } else {
     bleno.stopAdvertising();
   }
@@ -749,12 +1029,13 @@ bleno.on("stateChange", function (state) {
 // Linux only events /////////////////
 bleno.on("accept", function (clientAddress) {
   recordLogEntry("INFO", "BLE", "on -> accept, client: " + clientAddress);
-
   bleno.updateRssi();
+  intervalPlayVideo.runPlaylistVideoConnected();
 });
 
 bleno.on("disconnect", function (clientAddress) {
   recordLogEntry("INFO", "BLE", "on -> disconnect, client: " + clientAddress);
+  intervalPlayVideo.runPlaylistVideoDisconnected();
 });
 
 bleno.on("rssiUpdate", function (rssi) {
@@ -824,7 +1105,7 @@ const writeDataConfigVideoToJsonFile = (path, data) => {
   }
 };
 
-const writeLogRunVideo = (path, newLog) => {
+const writeLogRunVideoOffline = (path, newLog) => {
   // Check file exist
   if (fs.existsSync(path)) {
     // If exit, read data from the file
@@ -835,6 +1116,7 @@ const writeLogRunVideo = (path, newLog) => {
     const arrayCheckDuplicateID = currentData?.filter(
       (video) => video.ID === newLog.ID
     );
+
     if (arrayCheckDuplicateID.length === 0) {
       // Add new data
       const newData = [...currentData, newLog];
@@ -851,12 +1133,13 @@ const writeLogRunVideo = (path, newLog) => {
           return element;
         }
       });
+
       fs.writeFileSync(path, JSON.stringify(newLogData));
     }
 
     recordLogEntry(
       "INFO",
-      "writeDataConfigVideoToJsonFile",
+      "writeLogRunVideoOffline",
       "File log đã được cập nhật"
     );
   } else {
@@ -865,9 +1148,22 @@ const writeLogRunVideo = (path, newLog) => {
 
     recordLogEntry(
       "INFO",
-      "writeDataConfigVideoToJsonFile",
+      "writeLogRunVideoOffline",
       "File log mới đã được tạo và thêm dữ liệu"
     );
+  }
+};
+
+const readLogRunVideoOffline = (path) => {
+  // Check file exist
+  if (fs.existsSync(path)) {
+    // If exit, read data from the file
+    const rawData = fs.readFileSync(path);
+
+    const currentData = JSON.parse(rawData) || [];
+    return currentData;
+  } else {
+    return undefined;
   }
 };
 
@@ -878,7 +1174,10 @@ const getLogVideoById = (path, id) => {
     const rawData = fs.readFileSync(path);
 
     const currentData = JSON.parse(rawData) || [];
-    return currentData.find((element) => element.ID === id);
+
+    const logVideoById = currentData.find((element) => element.ID === id);
+
+    return logVideoById;
   } else {
     return undefined;
   }
@@ -910,11 +1209,7 @@ const DeleteFile = (path) => {
   if (fs.existsSync(path)) {
     // Delete file
     fs.unlinkSync(path);
-    recordLogEntry(
-      "INFO",
-      "writeDataConfigVideoToJsonFile",
-      "Dữ liệu đã được xóa khỏi file."
-    );
+    recordLogEntry("INFO", "DeleteFile", "File đã được xóa.");
   }
 };
 
@@ -943,9 +1238,25 @@ const DeleteVideoById = (path, id) => {
 
     recordLogEntry(
       "INFO",
-      "UpdateConfigVideoFile",
+      "DeleteVideoById",
       "Danh sách cấu hình video đã được cập nhật."
     );
+  }
+};
+
+const DeleteLogVideoById = (path, id) => {
+  if (fs.existsSync(path)) {
+    // If exit, read data from the file
+    const rawData = fs.readFileSync(path);
+    const configVideoData = JSON.parse(rawData);
+    const newConfigVideoData = configVideoData.filter(
+      (video) => video.ID !== id
+    );
+
+    // Write new data to the file
+    fs.writeFileSync(path, JSON.stringify(newConfigVideoData));
+
+    recordLogEntry("INFO", "DeleteLogVideoById", `Đã xóa log của video ${id}.`);
   }
 };
 
