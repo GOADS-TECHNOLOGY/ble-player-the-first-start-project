@@ -9,15 +9,16 @@ const cron = require("node-cron");
 const os = require("os");
 // get host name
 const hostName = os.hostname();
-const networkInterfaces = os.networkInterfaces();
-let macAddress = null;
-if (networkInterfaces.hasOwnProperty("eth0")) {
-  macAddress = networkInterfaces["eth0"][0].mac;
-} else if (networkInterfaces.hasOwnProperty("wlan0")) {
-  macAddress = networkInterfaces["wlan0"][0].mac;
-} else {
-  macAddress = fffffffffffffffffffffffffffffff0;
-}
+
+// const networkInterfaces = os.networkInterfaces();
+// let macAddress = null;
+// if (networkInterfaces.hasOwnProperty("eth0")) {
+//   macAddress = networkInterfaces["eth0"][0].mac;
+// } else if (networkInterfaces.hasOwnProperty("wlan0")) {
+//   macAddress = networkInterfaces["wlan0"][0].mac;
+// } else {
+//   macAddress = fffffffffffffffffffffffffffffff0;
+// }
 
 const BlenoPrimaryService = bleno.PrimaryService;
 const BlenoCharacteristic = bleno.Characteristic;
@@ -713,7 +714,7 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
       properties: ["write", "notify", "read"],
       // properties: ["writeWithoutResponse", "notify"],
     });
-    this.writeCount = 0;
+    // this.writeCount = 0;
     this.completeData = Buffer.alloc(0);
     this.child = null;
     this.isReceivedData = false;
@@ -729,7 +730,12 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
 
       if (Number(convertObj?.Code) === 100) {
         this.completeData = Buffer.alloc(0);
-        this.writeCount = 0;
+        // this.writeCount = 0;
+        recordLogEntry(
+          "INFO",
+          "onWriteRequest",
+          `Start receiving video data from application`
+        );
       }
 
       if (Number(convertObj?.Code) === 200) {
@@ -759,11 +765,11 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
           }
 
           this.completeData = Buffer.alloc(0);
-          this.writeCount = 0;
+          // this.writeCount = 0;
 
           intervalPlayVideo.setIndexPlayVideo(0);
           intervalPlayVideo.clearPlaylistVideo();
-          intervalPlayVideo.runPlaylistVideo();
+          intervalPlayVideo.runPlaylistVideoConnected();
 
           callback(this.RESULT_SUCCESS);
         }
@@ -892,20 +898,19 @@ class WriteOnlyCharacteristic extends BlenoCharacteristic {
   decodeConvertToFile(dataString, id) {
     if (!fs.existsSync(pathToStoreVideo)) {
       fs.mkdirSync(pathToStoreVideo, { recursive: true });
-    } else {
-      const bufferData = Buffer.from(dataString, "base64");
+    }
+    const bufferData = Buffer.from(dataString, "base64");
 
-      fs.writeFileSync(`${pathToStoreVideo}/${id}.mp4`, bufferData, "binary");
+    fs.writeFileSync(`${pathToStoreVideo}/${id}.mp4`, bufferData, "binary");
 
-      recordLogEntry(
-        "INFO",
-        "decodeConvertToFile",
-        `${id}-File MP4 has been successfully created`
-      );
+    recordLogEntry(
+      "INFO",
+      "decodeConvertToFile",
+      `${id}-File MP4 has been successfully created`
+    );
 
-      if (this._updateValueCallback) {
-        this._updateValueCallback(Buffer.from(`${100}`, "utf-8"));
-      }
+    if (this._updateValueCallback) {
+      this._updateValueCallback(Buffer.from(`${100}`, "utf-8"));
     }
   }
 
@@ -998,7 +1003,7 @@ class IndicateOnlyCharacteristic extends BlenoCharacteristic {
 class SampleService extends BlenoPrimaryService {
   constructor() {
     super({
-      uuid: macAddress,
+      uuid: "fffffffffffffffffffffffffffffff0",
       characteristics: [
         new StaticReadOnlyCharacteristic(),
         new DynamicReadOnlyCharacteristic(),
@@ -1019,7 +1024,7 @@ bleno.on("stateChange", function (state) {
   );
 
   if (state === "poweredOn") {
-    bleno.startAdvertising(hostName, [macAddress]);
+    bleno.startAdvertising(hostName, ["fffffffffffffffffffffffffffffff0"]);
     intervalPlayVideo.runPlaylistVideoDisconnected();
   } else {
     bleno.stopAdvertising();
